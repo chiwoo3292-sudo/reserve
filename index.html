@@ -966,33 +966,69 @@ document.getElementById('btnSubmit').addEventListener('click', submitForm);
 
 function validate() {
   let ok = true;
+  let firstErrorEl = null;
+
   const name = document.getElementById('fName').value.trim();
   const phone = document.getElementById('fPhone').value.trim();
 
+  // 에러 초기화
   document.getElementById('errName').textContent = '';
   document.getElementById('errPhone').textContent = '';
   document.getElementById('errPrivacy').textContent = '';
   document.getElementById('fName').classList.remove('error');
   document.getElementById('fPhone').classList.remove('error');
 
+  // 날짜/시간 체크
+  if (!selectedDate || !selectedTime) {
+    const calSection = document.querySelector('.form-section');
+    calSection.style.outline = '2px solid #c0392b';
+    calSection.style.borderRadius = '10px';
+    if (!firstErrorEl) firstErrorEl = calSection;
+    // 안내 메시지
+    let msg = document.getElementById('calErrMsg');
+    if (!msg) {
+      msg = document.createElement('div');
+      msg.id = 'calErrMsg';
+      msg.style.cssText = 'color:#c0392b;font-size:12px;margin-top:8px;';
+      document.getElementById('timeSlotArea').after(msg);
+    }
+    msg.textContent = !selectedDate ? '상담 날짜를 선택해주세요.' : '상담 시간을 선택해주세요.';
+    ok = false;
+  } else {
+    const calSection = document.querySelector('.form-section');
+    calSection.style.outline = '';
+    const msg = document.getElementById('calErrMsg');
+    if (msg) msg.textContent = '';
+  }
+
+  // 성함
   if (!name) {
     document.getElementById('errName').textContent = '성함을 입력해주세요.';
     document.getElementById('fName').classList.add('error');
+    if (!firstErrorEl) firstErrorEl = document.getElementById('fName');
     ok = false;
   }
+
+  // 연락처
   if (!phone || !/^01[0-9]-\d{3,4}-\d{4}$/.test(phone)) {
     document.getElementById('errPhone').textContent = '올바른 연락처를 입력해주세요.';
     document.getElementById('fPhone').classList.add('error');
+    if (!firstErrorEl) firstErrorEl = document.getElementById('fPhone');
     ok = false;
   }
+
+  // 개인정보 동의
   if (!privacyAgree) {
     document.getElementById('errPrivacy').textContent = '개인정보 활용에 동의해주세요.';
+    if (!firstErrorEl) firstErrorEl = document.getElementById('privacyToggle');
     ok = false;
   }
-  if (!selectedDate || !selectedTime) {
-    alert('상담 날짜와 시간을 선택해주세요.');
-    ok = false;
+
+  // 첫 번째 오류 위치로 스크롤
+  if (firstErrorEl) {
+    firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
+
   return ok;
 }
 
@@ -1041,10 +1077,9 @@ function showSuccess(receiptNo) {
   s.style.display = 'block';
   s.innerHTML = `
     <div class="success-icon">✅</div>
-    <h2>예약 접수 완료</h2>
+    <h2>상담 예약이 정상적으로 접수되었습니다.</h2>
     <p>
-      상담 예약이 정상적으로 접수되었습니다.<br>
-      담당자 확인 후 <strong>유선으로 연락</strong>드리겠습니다.<br><br>
+      예약 확정시 회신 메일 보내드립니다.<br><br>
       <span style="font-size:12px;color:#999;">접수번호 : <strong style="color:#2b4a3e;">${receiptNo || ''}</strong></span><br><br>
       감사합니다. <strong>지복득마루</strong>
     </p>
