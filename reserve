@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>상담 예약 | 지복득마루</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7f6f4;
+    --white: #ffffff;
+    --ink: #1a1a1a;
+    --ink-light: #555;
+    --ink-muted: #999;
+    --accent: #2b4a3e;
+    --accent-light: #3d6b5c;
+    --accent-bg: #edf2f0;
+    --border: #ddd;
+    --border-focus: #2b4a3e;
+    --error: #c0392b;
+    --radius: 6px;
+    --font: 'Noto Sans KR', sans-serif;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* HEADER */
+  .site-header {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 24px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .site-header .brand {
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .site-header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--ink);
+  }
+
+  /* NOTICE */
+  .notice-bar {
+    background: var(--accent-bg);
+    border-left: 3px solid var(--accent);
+    margin: 20px auto;
+    max-width: 680px;
+    padding: 14px 18px;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: 13px;
+    color: var(--ink-light);
+    line-height: 1.7;
+  }
+  .notice-bar strong { color: var(--accent); }
+
+  /* FORM WRAPPER */
+  .form-wrap {
+    max-width: 680px;
+    margin: 0 auto 60px;
+    padding: 0 16px;
+  }
+
+  /* SECTION */
+  .form-section {
+    background: var(--white);
+    border-radius: 10px;
+    padding: 28px 24px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+  }
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--accent-bg);
+  }
+
+  /* CALENDAR */
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .cal-nav button {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    width: 32px; height: 32px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--ink-light);
+    transition: all 0.15s;
+  }
+  .cal-nav button:hover { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+  .cal-month { font-size: 15px; font-weight: 700; color: var(--ink); }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .cal-day-label {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    padding: 6px 0;
+    letter-spacing: 0.05em;
+  }
+  .cal-day-label.sun { color: #c0392b; }
+  .cal-day-label.sat { color: #2980b9; }
+
+  .cal-cell {
+    text-align: center;
+    padding: 8px 2px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+    color: var(--ink);
+    background: none;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cal-cell:hover:not(.disabled):not(.empty) { background: var(--accent-bg); }
+  .cal-cell.selected { background: var(--accent); color: #fff; font-weight: 700; border-color: var(--accent); }
+  .cal-cell.today:not(.selected) { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .cal-cell.disabled { color: var(--ink-muted); cursor: not-allowed; opacity: 0.4; }
+  .cal-cell.empty { cursor: default; }
+  .cal-cell.closed { color: var(--ink-muted); cursor: not-allowed; text-decoration: line-through; opacity: 0.4; }
+
+  /* TIME SLOTS */
+  .time-slots {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .time-slot {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    text-align: center;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ink);
+    background: var(--white);
+  }
+  .time-slot:hover:not(.taken) { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+  .time-slot.selected { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  .time-slot.taken { background: #f0f0f0; color: var(--ink-muted); cursor: not-allowed; text-decoration: line-through; }
+  .no-date-msg { text-align: center; color: var(--ink-muted); font-size: 13px; padding: 20px 0; }
+
+  /* FIELDS */
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .field-row.full { grid-template-columns: 1fr; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-light);
+    letter-spacing: 0.03em;
+  }
+  .field label .req { color: #c0392b; margin-left: 2px; font-weight: 700; }
+  .field input, .field select, .field textarea {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: var(--font);
+    color: var(--ink);
+    background: var(--white);
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--border-focus); }
+  .field input.error, .field select.error { border-color: var(--error); }
+  .field textarea { resize: vertical; min-height: 90px; }
+
+  /* RADIO / CHECKBOX GROUPS */
+  .radio-group, .check-group {
+    display: flex;
+    flex-wrap: nowrap; /* PC: 무조건 1줄 */
+    gap: 8px;
+    margin-top: 2px;
+  }
+  .radio-btn, .check-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 7px 12px;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+    color: var(--ink-light);
+    white-space: nowrap; /* 텍스트 줄바꿈 방지 */
+  }
+  .radio-btn input, .check-btn input { display: none; }
+  .radio-btn:hover, .check-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .radio-btn.active, .check-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 500;
+  }
+
+  /* TOGGLE */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--ink-light);
+    cursor: pointer;
+  }
+  .toggle-box {
+    width: 18px; height: 18px;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .toggle-box.checked { background: var(--accent); border-color: var(--accent); }
+  .toggle-box.checked::after { content: '✓'; color: #fff; font-size: 11px; font-weight: 700; }
+
+  /* SPACE TYPE GRID (3열 2줄) */
+  .space-type-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 2px;
+  }
+  .space-btn {
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 8px 10px;
+    text-align: center;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ink-light);
+    white-space: nowrap;
+  }
+  .space-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+  .space-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+
+  /* ELEVATOR */
+  .elev-group { display: flex; gap: 8px; }
+  .elev-btn {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px;
+    text-align: center;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ink-light);
+  }
+  .elev-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .elev-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+  /* PRODUCT GRID */
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .product-btn {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 8px;
+    text-align: center;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ink-light);
+    line-height: 1.4;
+  }
+  .product-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+  .product-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+  .product-hint { font-size: 11px; color: var(--ink-muted); margin-top: 8px; line-height: 1.6; }
+
+  /* PRIVACY */
+  .privacy-box {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    font-size: 12px;
+    color: var(--ink-muted);
+    line-height: 1.7;
+    max-height: 100px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    background: #fafafa;
+  }
+
+  /* SUBMIT */
+  .submit-area { text-align: center; margin-top: 8px; }
+  .btn-submit {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 16px 60px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: var(--font);
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 0.2s;
+    width: 100%;
+  }
+  .btn-submit:hover { background: var(--accent-light); }
+  .btn-submit:disabled { background: var(--ink-muted); cursor: not-allowed; }
+
+  /* SUCCESS */
+  .success-screen {
+    display: none;
+    text-align: center;
+    padding: 60px 24px;
+    background: var(--white);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .success-icon { font-size: 48px; margin-bottom: 16px; }
+  .success-screen h2 { font-size: 20px; font-weight: 700; margin-bottom: 10px; color: var(--accent); }
+  .success-screen p { font-size: 14px; color: var(--ink-light); line-height: 1.8; }
+
+  /* LOADING */
+  .loading-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(255,255,255,0.8);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .loading-overlay.show { display: flex; }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--accent-bg);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* WORK DATE PICKER */
+  .datepicker-wrap { position: relative; }
+  .datepicker-input {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: var(--font);
+    color: var(--ink);
+    background: var(--white);
+    width: 100%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+    transition: border-color 0.15s;
+  }
+  .datepicker-input:hover { border-color: var(--border-focus); }
+  .datepicker-input .placeholder { color: var(--ink-muted); }
+  .datepicker-input .icon { font-size: 14px; color: var(--ink-muted); }
+  .datepicker-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    z-index: 200;
+    width: 300px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+  }
+  .datepicker-dropdown.open { display: block; }
+  .dp-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .dp-nav button {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    width: 28px; height: 28px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--ink-light);
+    transition: all 0.15s;
+  }
+  .dp-nav button:hover { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+  .dp-month { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .dp-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+  .dp-label {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    padding: 4px 0;
+  }
+  .dp-label.sun { color: #c0392b; }
+  .dp-label.sat { color: #2980b9; }
+  .dp-cell {
+    text-align: center;
+    padding: 5px 2px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ink);
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .dp-cell:hover:not(.dp-empty):not(.dp-past) { background: var(--accent-bg); color: var(--accent); }
+  .dp-cell.dp-selected { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; }
+  .dp-cell.dp-today:not(.dp-selected) { color: var(--accent); font-weight: 700; }
+  .dp-cell.dp-past { color: var(--ink-muted); opacity: 0.4; cursor: not-allowed; }
+  .dp-cell.dp-empty { cursor: default; }
+
+  .field-error { font-size: 11px; color: var(--error); margin-top: 2px; }
+
+  @media (max-width: 480px) {
+    .field-row { grid-template-columns: 1fr; }
+    .product-grid { grid-template-columns: repeat(2, 1fr); }
+    .time-slots { grid-template-columns: repeat(2, 1fr); }
+    .radio-group, .check-group { flex-wrap: wrap; } /* 모바일에서만 줄바꿈 허용 */
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <span>접수 중입니다...</span>
+</div>
+
+<header class="site-header">
+  <div class="brand">J I B O K D E U K M A R U</div>
+  <h1>상담 예약</h1>
+</header>
+
+<div class="form-wrap">
+
+  <div class="notice-bar">
+    원목마루는 빛과 공간에 따라 색감과 분위기가 달라지기 때문에 사진과 실제가 다르게 보일 수 있습니다.<br>
+    지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며 가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.
+  </div>
+
+  <div id="mainForm">
+
+    <!-- ① 예약 일정 -->
+    <div class="form-section">
+      <div class="section-title">① 예약 일정</div>
+
+      <div class="cal-nav">
+        <button id="prevMonth">‹</button>
+        <span class="cal-month" id="calMonthLabel"></span>
+        <button id="nextMonth">›</button>
+      </div>
+
+      <div class="cal-grid" id="calGrid"></div>
+
+      <div id="timeSlotArea">
+        <div class="no-date-msg">날짜를 선택해주세요</div>
+      </div>
+    </div>
+
+    <!-- ② 예약자 정보 -->
+    <div class="form-section">
+      <div class="section-title">② 예약자 정보</div>
+
+      <div class="field-row" style="margin-bottom:12px;">
+        <div class="field">
+          <label>예약자 유형 <span class="req">*</span></label>
+          <div class="radio-group" id="visitorTypeGroup">
+            <label class="radio-btn active" data-val="개인 소비자">
+              <input type="radio" name="visitorType" value="개인 소비자" checked> 개인 소비자
+            </label>
+            <label class="radio-btn" data-val="인테리어업체">
+              <input type="radio" name="visitorType" value="인테리어업체"> 인테리어업체
+            </label>
+            <label class="radio-btn" data-val="건축사무소">
+              <input type="radio" name="visitorType" value="건축사무소"> 건축사무소
+            </label>
+            <label class="radio-btn" data-val="건설사">
+              <input type="radio" name="visitorType" value="건설사"> 건설사
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row" style="margin-bottom:12px;">
+        <div class="field">
+          <label>방문 인원</label>
+          <div class="radio-group" id="visitCountGroup">
+            <label class="radio-btn active" data-val="1명 (개인)">
+              <input type="radio" name="visitCount" value="1명 (개인)" checked> 1명 (개인)
+            </label>
+            <label class="radio-btn" data-val="2명">
+              <input type="radio" name="visitCount" value="2명"> 2명
+            </label>
+            <label class="radio-btn" data-val="3명">
+              <input type="radio" name="visitCount" value="3명"> 3명
+            </label>
+            <label class="radio-btn" data-val="4명">
+              <input type="radio" name="visitCount" value="4명"> 4명
+            </label>
+            <label class="radio-btn" data-val="5인 이상">
+              <input type="radio" name="visitCount" value="5인 이상"> 5인 이상
+            </label>
+          </div>
+        </div>
+        <div class="field" style="justify-content:flex-end;">
+          <label>&nbsp;</label>
+          <div class="toggle-row" id="revisitToggle">
+            <div class="toggle-box" id="revisitBox"></div>
+            재방문
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>예약자 성함 <span class="req">*</span></label>
+          <input type="text" id="fName" placeholder="홍길동">
+          <span class="field-error" id="errName"></span>
+        </div>
+        <div class="field">
+          <label>연락처 <span class="req">*</span></label>
+          <input type="tel" id="fPhone" placeholder="010-0000-0000">
+          <span class="field-error" id="errPhone"></span>
+        </div>
+      </div>
+
+      <div class="field-row full">
+        <div class="field">
+          <label>업체명 <span style="font-size:11px;color:var(--ink-muted);">인테리어 업체 / 턴키 업체 기입</span></label>
+          <input type="text" id="fCompany">
+        </div>
+      </div>
+    </div>
+
+    <!-- ③ 시공 정보 -->
+    <div class="form-section">
+      <div class="section-title">③ 시공 정보</div>
+
+      <div class="field-row full" style="margin-bottom:12px;">
+        <div class="field">
+          <label>현장 주소</label>
+          <input type="text" id="fAddress" placeholder="서울시 강남구 **아파트 101동 1101호">
+        </div>
+      </div>
+
+      <div class="field-row full" style="margin-bottom:12px;">
+        <div class="field">
+          <label>공간 유형</label>
+          <div class="space-type-grid" id="spaceTypeGroup">
+            <div class="space-btn active" data-val="아파트">아파트</div>
+            <div class="space-btn" data-val="빌라">빌라</div>
+            <div class="space-btn" data-val="주택">주택</div>
+            <div class="space-btn" data-val="상가/상업공간">상가/상업공간</div>
+            <div class="space-btn" data-val="사무실">사무실</div>
+            <div class="space-btn" data-val="오피스텔">오피스텔</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>평수</label>
+          <input type="text" id="fSize" placeholder="예: 35평">
+        </div>
+        <div class="field">
+          <label>층수</label>
+          <input type="text" id="fFloor" placeholder="예: 3층">
+        </div>
+      </div>
+
+      <div class="field-row full" style="margin-bottom:12px;">
+        <div class="field">
+          <label>엘리베이터</label>
+          <div class="elev-group" id="elevGroup">
+            <div class="elev-btn active" data-val="있음">있음</div>
+            <div class="elev-btn" data-val="없음">없음</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row full" style="margin-bottom:12px;">
+        <div class="field">
+          <label>마루 시공 예정일</label>
+          <div class="datepicker-wrap" id="workDateWrap">
+            <div class="datepicker-input" id="workDateInput">
+              <span id="workDateDisplay" class="placeholder">날짜를 선택해주세요</span>
+              <span class="icon">📅</span>
+            </div>
+            <div class="datepicker-dropdown" id="workDateDropdown">
+              <div class="dp-nav">
+                <button id="dpPrev">‹</button>
+                <span class="dp-month" id="dpMonthLabel"></span>
+                <button id="dpNext">›</button>
+              </div>
+              <div class="dp-grid" id="dpGrid"></div>
+            </div>
+          </div>
+          <input type="hidden" id="fWorkDate">
+        </div>
+      </div>
+
+      <div class="field-row full">
+        <div class="field">
+          <label>선호 제품 <span style="font-size:11px;color:var(--ink-muted);">(복수선택 가능)</span></label>
+          <div class="product-grid" id="productGrid">
+            <div class="product-btn" data-val="밝은 마루">밝은 마루</div>
+            <div class="product-btn" data-val="내추럴 마루">내추럴 마루</div>
+            <div class="product-btn" data-val="어두운 마루">어두운 마루</div>
+            <div class="product-btn" data-val="중폭 (165mm)">중폭<br>(165mm)</div>
+            <div class="product-btn" data-val="광폭 (190mm)">광폭<br>(190mm)</div>
+            <div class="product-btn" data-val="초광폭 (240mm)">초광폭<br>(240mm)</div>
+            <div class="product-btn" data-val="옹이 있음">옹이 있음</div>
+            <div class="product-btn" data-val="옹이 없음">옹이 없음</div>
+          </div>
+          <p class="product-hint">선호 제품 선택 시 해당 특성에 맞는 제품을 추천해드립니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ④ 전달 사항 -->
+    <div class="form-section">
+      <div class="section-title">④ 전달 사항</div>
+      <div class="field">
+        <label>기타 문의 및 전달 사항</label>
+        <textarea id="fMemo" placeholder="궁금하신 점이나 미리 전달하실 내용을 자유롭게 적어주세요."></textarea>
+      </div>
+    </div>
+
+    <!-- ⑤ 개인정보 동의 -->
+    <div class="form-section">
+      <div class="section-title">⑤ 개인정보 활용 동의</div>
+      <div class="privacy-box">
+        수집하는 개인정보 항목 : 성함, 연락처, 주소, 시공 현장 정보 등<br>
+        수집 및 이용 목적 : 상담 예약 확인 및 시공 및 AS서비스 제공<br>
+        귀하는 개인정보 수집·이용에 대한 동의를 거부하실 수 있으나, 동의 거부 시 서비스 이용이 제한됩니다.
+      </div>
+      <div class="toggle-row" id="privacyToggle">
+        <div class="toggle-box" id="privacyBox"></div>
+        개인정보 수집 및 활용에 동의합니다. <span class="req" style="color:#c0392b;margin-left:2px;font-weight:700;">*</span>
+      </div>
+      <span class="field-error" id="errPrivacy"></span>
+    </div>
+
+    <div class="submit-area">
+      <button class="btn-submit" id="btnSubmit">예약 접수하기</button>
+    </div>
+
+  </div><!-- /mainForm -->
+
+  <div class="success-screen" id="successScreen">
+    <div class="success-icon">✅</div>
+    <h2>예약 접수 완료</h2>
+    <p>
+      상담 예약이 정상적으로 접수되었습니다.<br>
+      담당자 확인 후 <strong>유선으로 연락</strong>드리겠습니다.<br><br>
+      감사합니다. <strong>지복득마루</strong>
+    </p>
+  </div>
+
+</div><!-- /form-wrap -->
+
+<script>
+// ─────────────────────────────────────────
+// APPS SCRIPT URL (배포 후 여기에 입력)
+// ─────────────────────────────────────────
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzsFn2BmnSw8lHLahpXCs6UQi-QOiJrQyw5w8SLOxoAc4t_ok3iV85fTZ7LrqFRocxS/exec';
+
+// ─────────────────────────────────────────
+// 슬롯 설정 (추후 구글시트에서 가져올 것)
+// 형식: { "YYYY-MM-DD": ["09:00~10:00", "10:00~11:00", ...] }
+// false = 해당 날짜 비활성 / [] = 슬롯없음
+// ─────────────────────────────────────────
+const SLOT_CONFIG = {
+  // 운영: 월~토 / 예약가능: 10:00~16:00 (30분 단위, 마지막 슬롯 15:30~16:00)
+  _defaultWeekday: [
+    "10:00~10:30","10:30~11:00",
+    "11:00~11:30","11:30~12:00",
+    "12:00~12:30","12:30~13:00",
+    "13:00~13:30","13:30~14:00",
+    "14:00~14:30","14:30~15:00",
+    "15:00~15:30","15:30~16:00"
+  ],
+  _closedDays: [0], // 0=일요일만 휴무
+};
+
+// ─────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────
+let curYear, curMonth, selectedDate = null, selectedTime = null;
+let revisit = false, privacyAgree = false, elevator = '있음';
+let visitorType = '개인 소비자', visitCount = '1명', spaceType = '아파트';
+let selectedProducts = new Set();
+let bookedSlots = {}; // { "YYYY-MM-DD": ["10:00~11:00"] } 이미 예약된 슬롯
+
+// ─────────────────────────────────────────
+// CALENDAR
+// ─────────────────────────────────────────
+function initCalendar() {
+  const now = new Date();
+  curYear = now.getFullYear();
+  curMonth = now.getMonth();
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const label = document.getElementById('calMonthLabel');
+  label.textContent = `${curYear}년 ${curMonth + 1}월`;
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  const days = ['일','월','화','수','목','금','토'];
+  days.forEach((d, i) => {
+    const el = document.createElement('div');
+    el.className = 'cal-day-label' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '');
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  const firstDay = new Date(curYear, curMonth, 1).getDay();
+  const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  for (let i = 0; i < firstDay; i++) {
+    const el = document.createElement('div');
+    el.className = 'cal-cell empty';
+    grid.appendChild(el);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(curYear, curMonth, d);
+    const dateStr = formatDate(curYear, curMonth + 1, d);
+    const dow = date.getDay();
+    const el = document.createElement('div');
+    el.textContent = d;
+
+    let cls = 'cal-cell';
+    if (date < today) cls += ' disabled';
+    else if (SLOT_CONFIG._closedDays.includes(dow)) cls += ' closed';
+    else {
+      if (date.toDateString() === today.toDateString()) cls += ' today';
+      if (selectedDate === dateStr) cls += ' selected';
+      el.addEventListener('click', () => selectDate(dateStr));
+    }
+
+    el.className = cls;
+    grid.appendChild(el);
+  }
+}
+
+async function selectDate(dateStr) {
+  selectedDate = dateStr;
+  selectedTime = null;
+  renderCalendar();
+
+  // 로딩 표시
+  document.getElementById('timeSlotArea').innerHTML = '<div class="no-date-msg">슬롯 불러오는 중...</div>';
+
+  // Apps Script에서 해당 날짜 closed 슬롯 조회
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getSlots&date=${dateStr}`);
+    const result = await res.json();
+    if (result.status === 'ok') {
+      if (result.dayClosed) {
+        document.getElementById('timeSlotArea').innerHTML = '<div class="no-date-msg">해당 날짜는 예약이 마감되었습니다.</div>';
+        return;
+      }
+      // closed 슬롯을 bookedSlots에 반영
+      bookedSlots[dateStr] = result.closedSlots || [];
+    }
+  } catch (e) {
+    // 네트워크 오류 시 빈 배열로 진행 (전체 오픈)
+    bookedSlots[dateStr] = bookedSlots[dateStr] || [];
+  }
+
+  renderTimeSlots(dateStr);
+}
+
+function renderTimeSlots(dateStr) {
+  const area = document.getElementById('timeSlotArea');
+  const slots = SLOT_CONFIG[dateStr] !== undefined
+    ? SLOT_CONFIG[dateStr]
+    : (SLOT_CONFIG._defaultWeekday || []);
+
+  if (!slots || slots.length === 0) {
+    area.innerHTML = '<div class="no-date-msg">해당 날짜는 예약 가능한 시간이 없습니다.</div>';
+    return;
+  }
+
+  // 오늘 날짜인 경우 현재 시각 이전 슬롯 비활성화
+  const now = new Date();
+  const todayStr = formatDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  const isToday = dateStr === todayStr;
+  const curMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const booked = bookedSlots[dateStr] || [];
+  let html = '<div class="time-slots">';
+  slots.forEach(slot => {
+    const taken = booked.includes(slot);
+    // 오늘이면 슬롯 시작시간이 현재 시각 이전이면 비활성
+    let isPast = false;
+    if (isToday) {
+      const startStr = slot.split('~')[0]; // "10:30"
+      const [h, m] = startStr.split(':').map(Number);
+      isPast = (h * 60 + m) <= curMinutes;
+    }
+    const sel = selectedTime === slot;
+    const cls = (taken || isPast) ? ' taken' : sel ? ' selected' : '';
+    html += `<div class="time-slot${cls}" data-slot="${slot}">${slot}</div>`;
+  });
+  html += '</div>';
+  area.innerHTML = html;
+
+  area.querySelectorAll('.time-slot:not(.taken)').forEach(el => {
+    el.addEventListener('click', () => {
+      selectedTime = el.dataset.slot;
+      renderTimeSlots(dateStr);
+    });
+  });
+}
+
+document.getElementById('prevMonth').addEventListener('click', () => {
+  curMonth--; if (curMonth < 0) { curMonth = 11; curYear--; }
+  renderCalendar();
+  document.getElementById('timeSlotArea').innerHTML = '<div class="no-date-msg">날짜를 선택해주세요</div>';
+  selectedDate = null; selectedTime = null;
+});
+document.getElementById('nextMonth').addEventListener('click', () => {
+  curMonth++; if (curMonth > 11) { curMonth = 0; curYear++; }
+  renderCalendar();
+  document.getElementById('timeSlotArea').innerHTML = '<div class="no-date-msg">날짜를 선택해주세요</div>';
+  selectedDate = null; selectedTime = null;
+});
+
+// ─────────────────────────────────────────
+// RADIO / TOGGLE / PRODUCT BUTTONS
+// ─────────────────────────────────────────
+function bindRadioGroup(groupId, onChange) {
+  document.getElementById(groupId).querySelectorAll('.radio-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById(groupId).querySelectorAll('.radio-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      btn.querySelector('input').checked = true;
+      onChange(btn.dataset.val);
+    });
+  });
+}
+bindRadioGroup('visitorTypeGroup', v => visitorType = v);
+bindRadioGroup('visitCountGroup', v => visitCount = v);
+
+// 공간유형 - space-btn 방식
+document.getElementById('spaceTypeGroup').querySelectorAll('.space-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('spaceTypeGroup').querySelectorAll('.space-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    spaceType = btn.dataset.val;
+  });
+});
+
+document.getElementById('revisitToggle').addEventListener('click', () => {
+  revisit = !revisit;
+  document.getElementById('revisitBox').className = 'toggle-box' + (revisit ? ' checked' : '');
+});
+
+document.getElementById('privacyToggle').addEventListener('click', () => {
+  privacyAgree = !privacyAgree;
+  document.getElementById('privacyBox').className = 'toggle-box' + (privacyAgree ? ' checked' : '');
+  document.getElementById('errPrivacy').textContent = '';
+});
+
+document.getElementById('elevGroup').querySelectorAll('.elev-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('elevGroup').querySelectorAll('.elev-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    elevator = btn.dataset.val;
+  });
+});
+
+document.getElementById('productGrid').querySelectorAll('.product-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const v = btn.dataset.val;
+    if (selectedProducts.has(v)) { selectedProducts.delete(v); btn.classList.remove('active'); }
+    else { selectedProducts.add(v); btn.classList.add('active'); }
+  });
+});
+
+// 전화번호 자동 하이픈
+document.getElementById('fPhone').addEventListener('input', function() {
+  let v = this.value.replace(/\D/g, '');
+  if (v.length <= 3) this.value = v;
+  else if (v.length <= 7) this.value = v.slice(0,3) + '-' + v.slice(3);
+  else this.value = v.slice(0,3) + '-' + v.slice(3,7) + '-' + v.slice(7,11);
+});
+
+// ─────────────────────────────────────────
+// SUBMIT
+// ─────────────────────────────────────────
+document.getElementById('btnSubmit').addEventListener('click', submitForm);
+
+function validate() {
+  let ok = true;
+  const name = document.getElementById('fName').value.trim();
+  const phone = document.getElementById('fPhone').value.trim();
+
+  document.getElementById('errName').textContent = '';
+  document.getElementById('errPhone').textContent = '';
+  document.getElementById('errPrivacy').textContent = '';
+  document.getElementById('fName').classList.remove('error');
+  document.getElementById('fPhone').classList.remove('error');
+
+  if (!name) {
+    document.getElementById('errName').textContent = '성함을 입력해주세요.';
+    document.getElementById('fName').classList.add('error');
+    ok = false;
+  }
+  if (!phone || !/^01[0-9]-\d{3,4}-\d{4}$/.test(phone)) {
+    document.getElementById('errPhone').textContent = '올바른 연락처를 입력해주세요.';
+    document.getElementById('fPhone').classList.add('error');
+    ok = false;
+  }
+  if (!privacyAgree) {
+    document.getElementById('errPrivacy').textContent = '개인정보 활용에 동의해주세요.';
+    ok = false;
+  }
+  if (!selectedDate || !selectedTime) {
+    alert('상담 날짜와 시간을 선택해주세요.');
+    ok = false;
+  }
+  return ok;
+}
+
+async function submitForm() {
+  if (!validate()) return;
+
+  const payload = {
+    date: selectedDate,
+    time: selectedTime,
+    visitorType,
+    visitCount,
+    revisit: revisit ? '재방문' : '신규',
+    name: document.getElementById('fName').value.trim(),
+    phone: document.getElementById('fPhone').value.trim(),
+    company: document.getElementById('fCompany').value.trim(),
+    address: document.getElementById('fAddress').value.trim(),
+    spaceType,
+    size: document.getElementById('fSize').value.trim(),
+    floor: document.getElementById('fFloor').value.trim(),
+    elevator,
+    workDate: document.getElementById('fWorkDate').value.trim(),
+    products: [...selectedProducts].join(', '),
+    memo: document.getElementById('fMemo').value.trim(),
+    submittedAt: new Date().toLocaleString('ko-KR'),
+  };
+
+  document.getElementById('loadingOverlay').classList.add('show');
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'submit', ...payload }),
+    });
+    const result = await res.json();
+    if (result.status === 'ok') showSuccess(result.receiptNo);
+    else throw new Error(result.message || '오류가 발생했습니다.');
+  } catch (e) {
+    alert('접수 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.\n' + e.message);
+  } finally {
+    document.getElementById('loadingOverlay').classList.remove('show');
+  }
+}
+
+function showSuccess(receiptNo) {
+  document.getElementById('mainForm').style.display = 'none';
+  const s = document.getElementById('successScreen');
+  s.style.display = 'block';
+  s.innerHTML = `
+    <div class="success-icon">✅</div>
+    <h2>예약 접수 완료</h2>
+    <p>
+      상담 예약이 정상적으로 접수되었습니다.<br>
+      담당자 확인 후 <strong>유선으로 연락</strong>드리겠습니다.<br><br>
+      <span style="font-size:12px;color:#999;">접수번호 : <strong style="color:#2b4a3e;">${receiptNo || ''}</strong></span><br><br>
+      감사합니다. <strong>지복득마루</strong>
+    </p>
+  `;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────
+function formatDate(y, m, d) {
+  return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+
+// ─────────────────────────────────────────
+// WORK DATE DATEPICKER
+// ─────────────────────────────────────────
+let dpYear, dpMonth, selectedWorkDate = null;
+
+function initDatepicker() {
+  const now = new Date();
+  dpYear = now.getFullYear();
+  dpMonth = now.getMonth();
+  renderDp();
+}
+
+function renderDp() {
+  const label = document.getElementById('dpMonthLabel');
+  label.textContent = `${dpYear}년 ${dpMonth + 1}월`;
+  const grid = document.getElementById('dpGrid');
+  grid.innerHTML = '';
+
+  const days = ['일','월','화','수','목','금','토'];
+  days.forEach((d, i) => {
+    const el = document.createElement('div');
+    el.className = 'dp-label' + (i===0?' sun':i===6?' sat':'');
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  const firstDay = new Date(dpYear, dpMonth, 1).getDay();
+  const daysInMonth = new Date(dpYear, dpMonth + 1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  for (let i = 0; i < firstDay; i++) {
+    const el = document.createElement('div');
+    el.className = 'dp-cell dp-empty';
+    grid.appendChild(el);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(dpYear, dpMonth, d);
+    const dateStr = formatDate(dpYear, dpMonth + 1, d);
+    const el = document.createElement('div');
+    el.textContent = d;
+    let cls = 'dp-cell';
+    if (date < today) cls += ' dp-past';
+    else {
+      if (date.toDateString() === today.toDateString()) cls += ' dp-today';
+      if (selectedWorkDate === dateStr) cls += ' dp-selected';
+      el.addEventListener('click', () => {
+        selectedWorkDate = dateStr;
+        const [y, m, dd] = dateStr.split('-');
+        document.getElementById('workDateDisplay').textContent = `${y}년 ${parseInt(m)}월 ${parseInt(dd)}일`;
+        document.getElementById('workDateDisplay').classList.remove('placeholder');
+        document.getElementById('fWorkDate').value = dateStr;
+        document.getElementById('workDateDropdown').classList.remove('open');
+        renderDp();
+      });
+    }
+    el.className = cls;
+    grid.appendChild(el);
+  }
+}
+
+document.getElementById('workDateInput').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('workDateDropdown').classList.toggle('open');
+  renderDp();
+});
+document.getElementById('dpPrev').addEventListener('click', (e) => {
+  e.stopPropagation();
+  dpMonth--; if (dpMonth < 0) { dpMonth = 11; dpYear--; }
+  renderDp();
+});
+document.getElementById('dpNext').addEventListener('click', (e) => {
+  e.stopPropagation();
+  dpMonth++; if (dpMonth > 11) { dpMonth = 0; dpYear++; }
+  renderDp();
+});
+document.addEventListener('click', (e) => {
+  if (!document.getElementById('workDateWrap').contains(e.target)) {
+    document.getElementById('workDateDropdown').classList.remove('open');
+  }
+});
+
+// INIT
+initCalendar();
+initDatepicker();
+</script>
+</body>
+</html>
