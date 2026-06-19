@@ -502,7 +502,7 @@
 
   <div class="notice-bar">
     원목마루는 빛과 공간에 따라 색감과 분위기가 달라지기 때문에 사진과 실제가 다르게 보일 수 있습니다.<br>
-    지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며 가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.
+    지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며 <br>가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.
   </div>
 
   <div id="mainForm">
@@ -821,7 +821,7 @@ async function selectDate(dateStr) {
   renderCalendar();
 
   // 로딩 표시
-  document.getElementById('timeSlotArea').innerHTML = '<div class="no-date-msg">슬롯 불러오는 중...</div>';
+  document.getElementById('timeSlotArea').innerHTML = '<div class="no-date-msg">예약가능 시간 불러오는 중...</div>';
 
   // Apps Script에서 해당 날짜 closed 슬롯 조회
   try {
@@ -1077,9 +1077,9 @@ function showSuccess(receiptNo) {
   s.style.display = 'block';
   s.innerHTML = `
     <div class="success-icon">✅</div>
-    <h2>상담 예약이 정상적으로 접수되었습니다.</h2>
+    <h2>쇼룸 상담 예약이 정상적으로 접수되었습니다.</h2>
     <p>
-      예약 확정시 회신 메일 보내드립니다.<br><br>
+      예약 확정시 회신 메일을 보내드리겠습니다.<br><br>
       <span style="font-size:12px;color:#999;">접수번호 : <strong style="color:#2b4a3e;">${receiptNo || ''}</strong></span><br><br>
       감사합니다. <strong>지복득마루</strong>
     </p>
