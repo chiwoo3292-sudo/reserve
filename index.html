@@ -1022,11 +1022,9 @@ async function submitForm() {
   document.getElementById('loadingOverlay').classList.add('show');
 
   try {
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'submit', ...payload }),
-    });
+    // Apps Script는 GET 방식으로 호출 (CORS 문제 해결)
+    const params = new URLSearchParams({ action: 'submit', ...payload });
+    const res = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`);
     const result = await res.json();
     if (result.status === 'ok') showSuccess(result.receiptNo);
     else throw new Error(result.message || '오류가 발생했습니다.');
