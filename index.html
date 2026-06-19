@@ -501,8 +501,9 @@
 <div class="form-wrap">
 
   <div class="notice-bar">
-    원목마루는 빛과 공간에 따라 색감과 분위기가 달라지기 때문에 사진과 실제가 다르게 보일 수 있습니다.<br>
-    지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며 <br>가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.
+    <strong>안내사항</strong><br>
+    · 당일 예약은 유선으로만 가능합니다. (02-576-7736)<br>
+    · 매장 상황에 따라 대기가 발생할 수 있습니다.
   </div>
 
   <div id="mainForm">
@@ -689,7 +690,7 @@
       <div class="section-title">④ 전달 사항</div>
       <div class="field">
         <label>기타 문의 및 전달 사항</label>
-        <textarea id="fMemo" placeholder="궁금하신 점이나 미리 전달하실 내용을 자유롭게 적어주세요."></textarea>
+        <textarea id="fMemo"></textarea>
       </div>
     </div>
 
@@ -730,7 +731,7 @@
 // ─────────────────────────────────────────
 // APPS SCRIPT URL (배포 후 여기에 입력)
 // ─────────────────────────────────────────
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwY6cKchDaskiNYBJiVW9A7_gu_PkiYQZMZiZ1WxrQw74MUYCQJCxE3pPohve9zFKSnew/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxhYcxrFSOLFeb-ij5betPITVJkwMA-iUpKsPiHBKrAdMGFhhsL6DKGLePajbo4iE0I6g/exec';
 
 // ─────────────────────────────────────────
 // 슬롯 설정 (추후 구글시트에서 가져올 것)
@@ -802,10 +803,9 @@ function renderCalendar() {
     el.textContent = d;
 
     let cls = 'cal-cell';
-    if (date < today) cls += ' disabled';
+    if (date <= today) cls += ' disabled'; // 오늘 포함 과거 전체 비활성
     else if (SLOT_CONFIG._closedDays.includes(dow)) cls += ' closed';
     else {
-      if (date.toDateString() === today.toDateString()) cls += ' today';
       if (selectedDate === dateStr) cls += ' selected';
       el.addEventListener('click', () => selectDate(dateStr));
     }
@@ -1080,7 +1080,6 @@ function showSuccess(receiptNo) {
     <h2>쇼룸 상담 예약이 정상적으로 접수되었습니다.</h2>
     <p>
       예약 확정시 회신 메일을 보내드리겠습니다.<br><br>
-      <span style="font-size:12px;color:#999;">접수번호 : <strong style="color:#2b4a3e;">${receiptNo || ''}</strong></span><br><br>
       감사합니다. <strong>지복득마루</strong>
     </p>
   `;
