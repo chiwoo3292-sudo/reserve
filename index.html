@@ -37,7 +37,7 @@
   .site-header {
     background: var(--white);
     border-bottom: 1px solid var(--border);
-    padding: 20px 24px;
+    padding: 16px 24px 12px;
     text-align: center;
     position: sticky;
     top: 0;
@@ -55,6 +55,74 @@
     font-weight: 700;
     letter-spacing: 0.05em;
     color: var(--ink);
+    margin-bottom: 10px;
+  }
+
+  /* 언어 선택 버튼 */
+  .lang-bar {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .lang-btn {
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--ink-light);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: all .15s;
+  }
+  .lang-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  /* 히어로 이미지 */
+  .hero-section {
+    position: relative;
+    width: 100%;
+    max-height: 360px;
+    overflow: hidden;
+  }
+  .hero-img {
+    width: 100%;
+    height: 360px;
+    object-fit: cover;
+    display: block;
+    filter: brightness(0.62);
+  }
+  .hero-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 32px 40px;
+    max-width: 720px;
+  }
+  .hero-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 16px;
+    letter-spacing: 0.04em;
+  }
+  .hero-desc {
+    font-size: 14px;
+    color: rgba(255,255,255,0.88);
+    line-height: 1.9;
+  }
+  @media (max-width: 600px) {
+    .hero-img { height: 260px; }
+    .hero-title { font-size: 22px; }
+    .hero-desc { font-size: 12.5px; }
+    .hero-overlay { padding: 20px 20px; }
   }
 
   /* NOTICE */
@@ -495,8 +563,40 @@
 
 <header class="site-header">
   <div class="brand">J I B O K D E U K M A R U</div>
-  <h1>상담 예약</h1>
+  <h1 data-i18n="title">상담 예약</h1>
+  <div class="lang-bar">
+    <button class="lang-btn active" onclick="setLang('ko')">한국어</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('ja')">日本語</button>
+    <button class="lang-btn" onclick="setLang('zh')">中文</button>
+  </div>
 </header>
+
+<!-- 히어로 이미지 섹션 -->
+<div class="hero-section">
+  <img src="https://raw.githubusercontent.com/chiwoo3292-sudo/JBDSTOCK/refs/heads/main/%EC%98%88%EC%95%BD%ED%8F%BC%EC%9D%B4%EB%AF%B8%EC%A7%80.avif" alt="지복득마루 쇼룸" class="hero-img">
+  <div class="hero-overlay">
+    <h2 class="hero-title" data-i18n="heroTitle">상담 예약</h2>
+    <p class="hero-desc" data-i18n="heroDesc">원목마루는 빛과 공간에 따라 색감과 분위기가 달라지기 때문에 사진과 실제가 다르게 보일 수 있습니다.<br>지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며 가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.</p>
+  </div>
+</div>
+
+<!-- 월별 휴무안내 팝업 -->
+<div id="monthlyNoticeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;width:90%;max-width:480px;padding:28px 28px 22px;box-shadow:0 8px 40px rgba(0,0,0,0.2);position:relative;max-height:85vh;overflow-y:auto;">
+    <button onclick="closeMonthlyNotice()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
+    <div id="monthlyNoticeContent" style="font-family:var(--font);"></div>
+    <div style="text-align:center;margin-top:20px;">
+      <label style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:#999;cursor:pointer;">
+        <input type="checkbox" id="dontShowToday" onchange="handleDontShow(this)">
+        <span data-i18n="dontShow">오늘 하루 보지 않기</span>
+      </label>
+    </div>
+    <div style="text-align:center;margin-top:12px;">
+      <button onclick="closeMonthlyNotice()" style="padding:10px 32px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;" data-i18n="close">닫기</button>
+    </div>
+  </div>
+</div>
 
 <div class="form-wrap">
 
@@ -728,6 +828,88 @@
 </div><!-- /form-wrap -->
 
 <script>
+// ─────────────────────────────────────────
+// 다국어 (i18n)
+// ─────────────────────────────────────────
+const I18N = {
+  ko: {
+    title: '상담 예약', heroTitle: '상담 예약',
+    heroDesc: '원목마루는 빛과 공간에 따라 색감과 분위기가 달라지기 때문에 사진과 실제가 다르게 보일 수 있습니다.\n지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며 가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.',
+    dontShow: '오늘 하루 보지 않기', close: '닫기',
+  },
+  en: {
+    title: 'Consultation Booking', heroTitle: 'Consultation Booking',
+    heroDesc: 'The color and atmosphere of solid wood flooring can vary depending on light and space, so it may look different from photos.\nWe invite you to visit the Jibokdeuk Maru showroom to see, touch, and experience the wood in its most authentic form.',
+    dontShow: "Don't show today", close: 'Close',
+  },
+  ja: {
+    title: 'ご予約', heroTitle: 'ご予約',
+    heroDesc: '無垢フローリングは光や空間によって色合いや雰囲気が異なるため、写真と実物が異なって見えることがあります。\nジボクドゥクマル ショールームで実際に目で確かめ、手で質感を感じ、本物の木材をぜひ体験してください。',
+    dontShow: '今日は表示しない', close: '閉じる',
+  },
+  zh: {
+    title: '预约咨询', heroTitle: '预约咨询',
+    heroDesc: '实木地板因光线和空间不同，色调和氛围也会有所差异，实物可能与照片有所不同。\n欢迎您亲自前往지복득마루展厅，用眼睛确认，用手感受质感，体验最真实的原木。',
+    dontShow: '今日不再显示', close: '关闭',
+  },
+};
+
+let currentLang = 'ko';
+
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.querySelector(`.lang-btn[onclick="setLang('${lang}')"]`);
+  if (activeBtn) activeBtn.classList.add('active');
+  const t = I18N[lang] || I18N.ko;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (t[key] !== undefined) {
+      if (el.tagName === 'P' || el.classList.contains('hero-desc')) {
+        el.innerHTML = t[key].replace(/\n/g, '<br>');
+      } else {
+        el.textContent = t[key];
+      }
+    }
+  });
+  document.documentElement.lang = lang;
+}
+
+// ─────────────────────────────────────────
+// 월별 휴무안내 팝업
+// ─────────────────────────────────────────
+async function loadMonthlyNotice() {
+  // 오늘 하루 보지 않기 체크 여부 확인
+  const skipUntil = localStorage.getItem('jbd_notice_skip');
+  if (skipUntil && new Date() < new Date(skipUntil)) return;
+
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getMonthlyNotice`);
+    const data = await res.json();
+    if (data.status === 'ok' && data.notice) {
+      const content = document.getElementById('monthlyNoticeContent');
+      if (content) {
+        content.innerHTML = data.notice;
+        document.getElementById('monthlyNoticeModal').style.display = 'flex';
+      }
+    }
+  } catch(e) { /* 조용히 무시 */ }
+}
+
+window.closeMonthlyNotice = function() {
+  document.getElementById('monthlyNoticeModal').style.display = 'none';
+};
+
+window.handleDontShow = function(cb) {
+  if (cb.checked) {
+    const tomorrow = new Date();
+    tomorrow.setHours(23, 59, 59, 0);
+    localStorage.setItem('jbd_notice_skip', tomorrow.toISOString());
+  } else {
+    localStorage.removeItem('jbd_notice_skip');
+  }
+};
+
 // ─────────────────────────────────────────
 // APPS SCRIPT URL (배포 후 여기에 입력)
 // ─────────────────────────────────────────
@@ -1079,7 +1261,7 @@ function showSuccess(receiptNo) {
     <div class="success-icon">✅</div>
     <h2>쇼룸 상담 예약이 정상적으로 접수되었습니다.</h2>
     <p>
-      예약 확정시 문자로 안내드리겠습니다.<br><br>
+      예약 확정시 회신 메일을 보내드리겠습니다.<br><br>
       감사합니다. <strong>지복득마루</strong>
     </p>
   `;
@@ -1177,6 +1359,18 @@ document.addEventListener('click', (e) => {
 // INIT
 initCalendar();
 initDatepicker();
+
+// 언어 초기화 (저장된 언어 또는 기본값 ko)
+setLang(localStorage.getItem('jbd_lang') || 'ko');
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const lang = this.getAttribute('onclick').match(/'(\w+)'/)[1];
+    localStorage.setItem('jbd_lang', lang);
+  });
+});
+
+// 월별 휴무안내 팝업 로드
+window.addEventListener('load', () => setTimeout(loadMonthlyNotice, 600));
 </script>
 </body>
 </html>
