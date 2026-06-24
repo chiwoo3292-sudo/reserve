@@ -115,14 +115,27 @@
     letter-spacing: 0.04em;
   }
   .hero-desc {
-    font-size: 14px;
-    color: rgba(255,255,255,0.88);
-    line-height: 1.9;
+    font-size: 16px;
+    color: rgba(255,255,255,0.92);
+    line-height: 2;
+    font-family: 'Georgia', '바탕', 'Batang', 'Times New Roman', serif;
+    font-weight: 400;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    max-width: 640px;
   }
   @media (max-width: 600px) {
     .hero-img { height: 260px; }
     .hero-title { font-size: 22px; }
-    .hero-desc { font-size: 12.5px; }
+    .hero-desc {
+      font-size: 13.5px;
+      line-height: 1.95;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+      /* 모바일: 문장 단위로 자연스럽게 줄바꿈 */
+      text-align: justify;
+      hyphens: auto;
+    }
     .hero-overlay { padding: 20px 20px; }
   }
 
@@ -577,6 +590,7 @@
 <div class="hero-section">
   <img src="https://raw.githubusercontent.com/chiwoo3292-sudo/JBDSTOCK/refs/heads/main/%EC%98%88%EC%95%BD%ED%8F%BC%EC%9D%B4%EB%AF%B8%EC%A7%80.avif" alt="지복득마루 쇼룸" class="hero-img">
   <div class="hero-overlay">
+    <h2 class="hero-title" data-i18n="heroTitle">상담 예약</h2>
     <p class="hero-desc" data-i18n="heroDesc">원목마루는 빛과 공간에 따라 색감과 분위기가 달라지기 때문에 사진과 실제가 다르게 보일 수 있습니다.<br>지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며 가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.</p>
   </div>
 </div>
@@ -1499,7 +1513,7 @@ document.querySelectorAll('.lang-btn').forEach(btn => {
 });
 
 // 월별 휴무안내 팝업 로드
-window.addEventListener('load', () => setTimeout(loadMonthlyNotice, 0));
+window.addEventListener('load', () => loadMonthlyNotice());
 </script>
 </body>
 </html>
