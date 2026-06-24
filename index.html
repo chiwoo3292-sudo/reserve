@@ -103,8 +103,9 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
+    text-align: center;
     padding: 32px 40px;
-    max-width: 720px;
   }
   .hero-title {
     font-size: 32px;
@@ -601,16 +602,16 @@
 <div class="form-wrap">
 
   <div class="notice-bar">
-    <strong>안내사항</strong><br>
-    · 당일 예약은 유선으로만 가능합니다. (02-576-7736)<br>
-    · 매장 상황에 따라 대기가 발생할 수 있습니다.
+    <strong data-i18n="noticeTitle">안내사항</strong><br>
+    <span data-i18n="notice1">· 당일 예약은 유선으로만 가능합니다. (02-576-7736)</span><br>
+    <span data-i18n="notice2">· 매장 상황에 따라 대기가 발생할 수 있습니다.</span>
   </div>
 
   <div id="mainForm">
 
     <!-- ① 예약 일정 -->
     <div class="form-section">
-      <div class="section-title">① 예약 일정</div>
+      <div class="section-title" data-i18n="sec1">① 예약 일정</div>
 
       <div class="cal-nav">
         <button id="prevMonth">‹</button>
@@ -621,29 +622,29 @@
       <div class="cal-grid" id="calGrid"></div>
 
       <div id="timeSlotArea">
-        <div class="no-date-msg">날짜를 선택해주세요</div>
+        <div class="no-date-msg" data-i18n="selectDate">날짜를 선택해주세요</div>
       </div>
     </div>
 
     <!-- ② 예약자 정보 -->
     <div class="form-section">
-      <div class="section-title">② 예약자 정보</div>
+      <div class="section-title" data-i18n="sec2">② 예약자 정보</div>
 
       <div class="field-row" style="margin-bottom:12px;">
         <div class="field">
-          <label>예약자 유형 <span class="req">*</span></label>
+          <label data-i18n="visitorTypeLabel">예약자 유형 <span class="req">*</span></label>
           <div class="radio-group" id="visitorTypeGroup">
             <label class="radio-btn active" data-val="개인 소비자">
-              <input type="radio" name="visitorType" value="개인 소비자" checked> 개인 소비자
+              <input type="radio" name="visitorType" value="개인 소비자" checked> <span data-i18n="vt1">개인 소비자</span>
             </label>
             <label class="radio-btn" data-val="인테리어업체">
-              <input type="radio" name="visitorType" value="인테리어업체"> 인테리어업체
+              <input type="radio" name="visitorType" value="인테리어업체"> <span data-i18n="vt2">인테리어업체</span>
             </label>
             <label class="radio-btn" data-val="건축사무소">
-              <input type="radio" name="visitorType" value="건축사무소"> 건축사무소
+              <input type="radio" name="visitorType" value="건축사무소"> <span data-i18n="vt3">건축사무소</span>
             </label>
             <label class="radio-btn" data-val="건설사">
-              <input type="radio" name="visitorType" value="건설사"> 건설사
+              <input type="radio" name="visitorType" value="건설사"> <span data-i18n="vt4">건설사</span>
             </label>
           </div>
         </div>
@@ -651,22 +652,22 @@
 
       <div class="field-row" style="margin-bottom:12px;">
         <div class="field">
-          <label>방문 인원</label>
+          <label data-i18n="visitCountLabel">방문 인원</label>
           <div class="radio-group" id="visitCountGroup">
             <label class="radio-btn active" data-val="1명 (개인)">
-              <input type="radio" name="visitCount" value="1명 (개인)" checked> 1명 (개인)
+              <input type="radio" name="visitCount" value="1명 (개인)" checked> <span data-i18n="vc1">1명 (개인)</span>
             </label>
             <label class="radio-btn" data-val="2명">
-              <input type="radio" name="visitCount" value="2명"> 2명
+              <input type="radio" name="visitCount" value="2명"> <span data-i18n="vc2">2명</span>
             </label>
             <label class="radio-btn" data-val="3명">
-              <input type="radio" name="visitCount" value="3명"> 3명
+              <input type="radio" name="visitCount" value="3명"> <span data-i18n="vc3">3명</span>
             </label>
             <label class="radio-btn" data-val="4명">
-              <input type="radio" name="visitCount" value="4명"> 4명
+              <input type="radio" name="visitCount" value="4명"> <span data-i18n="vc4">4명</span>
             </label>
             <label class="radio-btn" data-val="5인 이상">
-              <input type="radio" name="visitCount" value="5인 이상"> 5인 이상
+              <input type="radio" name="visitCount" value="5인 이상"> <span data-i18n="vc5">5인 이상</span>
             </label>
           </div>
         </div>
@@ -674,27 +675,27 @@
           <label>&nbsp;</label>
           <div class="toggle-row" id="revisitToggle">
             <div class="toggle-box" id="revisitBox"></div>
-            재방문
+            <span data-i18n="revisit">재방문</span>
           </div>
         </div>
       </div>
 
       <div class="field-row">
         <div class="field">
-          <label>예약자 성함 <span class="req">*</span></label>
-          <input type="text" id="fName" placeholder="홍길동">
+          <label data-i18n="nameLabel">예약자 성함 <span class="req">*</span></label>
+          <input type="text" id="fName" data-i18n-placeholder="namePh" placeholder="홍길동">
           <span class="field-error" id="errName"></span>
         </div>
         <div class="field">
-          <label>연락처 <span class="req">*</span></label>
-          <input type="tel" id="fPhone" placeholder="010-0000-0000">
+          <label data-i18n="phoneLabel">연락처 <span class="req">*</span></label>
+          <input type="tel" id="fPhone" data-i18n-placeholder="phonePh" placeholder="010-0000-0000">
           <span class="field-error" id="errPhone"></span>
         </div>
       </div>
 
       <div class="field-row full">
         <div class="field">
-          <label>업체명 <span style="font-size:11px;color:var(--ink-muted);">인테리어 업체 / 턴키 업체 기입</span></label>
+          <label data-i18n="companyLabel">업체명 <span style="font-size:11px;color:var(--ink-muted);"><span data-i18n="companyHint">인테리어 업체 / 턴키 업체 기입</span></span></label>
           <input type="text" id="fCompany">
         </div>
       </div>
@@ -702,56 +703,56 @@
 
     <!-- ③ 시공 정보 -->
     <div class="form-section">
-      <div class="section-title">③ 시공 정보</div>
+      <div class="section-title" data-i18n="sec3">③ 시공 정보</div>
 
       <div class="field-row full" style="margin-bottom:12px;">
         <div class="field">
-          <label>현장 주소</label>
-          <input type="text" id="fAddress" placeholder="서울시 강남구 **아파트 101동 1101호">
+          <label data-i18n="addressLabel">현장 주소</label>
+          <input type="text" id="fAddress" data-i18n-placeholder="addressPh" placeholder="서울시 강남구 **아파트 101동 1101호">
         </div>
       </div>
 
       <div class="field-row full" style="margin-bottom:12px;">
         <div class="field">
-          <label>공간 유형</label>
+          <label data-i18n="spaceTypeLabel">공간 유형</label>
           <div class="space-type-grid" id="spaceTypeGroup">
-            <div class="space-btn active" data-val="아파트">아파트</div>
-            <div class="space-btn" data-val="빌라">빌라</div>
-            <div class="space-btn" data-val="주택">주택</div>
-            <div class="space-btn" data-val="상가/상업공간">상가/상업공간</div>
-            <div class="space-btn" data-val="사무실">사무실</div>
-            <div class="space-btn" data-val="오피스텔">오피스텔</div>
+            <div class="space-btn active" data-val="아파트"><span data-i18n="st1">아파트</span></div>
+            <div class="space-btn" data-val="빌라"><span data-i18n="st2">빌라</span></div>
+            <div class="space-btn" data-val="주택"><span data-i18n="st3">주택</span></div>
+            <div class="space-btn" data-val="상가/상업공간"><span data-i18n="st4">상가/상업공간</span></div>
+            <div class="space-btn" data-val="사무실"><span data-i18n="st5">사무실</span></div>
+            <div class="space-btn" data-val="오피스텔"><span data-i18n="st6">오피스텔</span></div>
           </div>
         </div>
       </div>
 
       <div class="field-row">
         <div class="field">
-          <label>평수</label>
-          <input type="text" id="fSize" placeholder="예: 35평">
+          <label data-i18n="sizeLabel">평수</label>
+          <input type="text" id="fSize" data-i18n-placeholder="sizePh" placeholder="예: 35평">
         </div>
         <div class="field">
-          <label>층수</label>
-          <input type="text" id="fFloor" placeholder="예: 3층">
+          <label data-i18n="floorLabel">층수</label>
+          <input type="text" id="fFloor" data-i18n-placeholder="floorPh" placeholder="예: 3층">
         </div>
       </div>
 
       <div class="field-row full" style="margin-bottom:12px;">
         <div class="field">
-          <label>엘리베이터</label>
+          <label data-i18n="elevLabel">엘리베이터</label>
           <div class="elev-group" id="elevGroup">
-            <div class="elev-btn active" data-val="있음">있음</div>
-            <div class="elev-btn" data-val="없음">없음</div>
+            <div class="elev-btn active" data-val="있음"><span data-i18n="elev1">있음</span></div>
+            <div class="elev-btn" data-val="없음"><span data-i18n="elev2">없음</span></div>
           </div>
         </div>
       </div>
 
       <div class="field-row full" style="margin-bottom:12px;">
         <div class="field">
-          <label>마루 시공 예정일</label>
+          <label data-i18n="workDateLabel">마루 시공 예정일</label>
           <div class="datepicker-wrap" id="workDateWrap">
             <div class="datepicker-input" id="workDateInput">
-              <span id="workDateDisplay" class="placeholder">날짜를 선택해주세요</span>
+              <span id="workDateDisplay" class="placeholder" data-i18n="selectDatePh">날짜를 선택해주세요</span>
               <span class="icon">📅</span>
             </div>
             <div class="datepicker-dropdown" id="workDateDropdown">
@@ -769,56 +770,56 @@
 
       <div class="field-row full">
         <div class="field">
-          <label>선호 제품 <span style="font-size:11px;color:var(--ink-muted);">(복수선택 가능)</span></label>
+          <label data-i18n="productLabel">선호 제품 <span style="font-size:11px;color:var(--ink-muted);"><span data-i18n="productHint">(복수선택 가능)</span></span></label>
           <div class="product-grid" id="productGrid">
-            <div class="product-btn" data-val="밝은 마루">밝은 마루</div>
-            <div class="product-btn" data-val="내추럴 마루">내추럴 마루</div>
-            <div class="product-btn" data-val="어두운 마루">어두운 마루</div>
-            <div class="product-btn" data-val="중폭 (165mm)">중폭<br>(165mm)</div>
-            <div class="product-btn" data-val="광폭 (190mm)">광폭<br>(190mm)</div>
-            <div class="product-btn" data-val="초광폭 (240mm)">초광폭<br>(240mm)</div>
-            <div class="product-btn" data-val="옹이 있음">옹이 있음</div>
-            <div class="product-btn" data-val="옹이 없음">옹이 없음</div>
+            <div class="product-btn" data-val="밝은 마루"><span data-i18n="pb1">밝은 마루</span></div>
+            <div class="product-btn" data-val="내추럴 마루"><span data-i18n="pb2">내추럴 마루</span></div>
+            <div class="product-btn" data-val="어두운 마루"><span data-i18n="pb3">어두운 마루</span></div>
+            <div class="product-btn" data-val="중폭 (165mm)"><span data-i18n="pb4">중폭<br>(165mm)</span></div>
+            <div class="product-btn" data-val="광폭 (190mm)"><span data-i18n="pb5">광폭<br>(190mm)</span></div>
+            <div class="product-btn" data-val="초광폭 (240mm)"><span data-i18n="pb6">초광폭<br>(240mm)</span></div>
+            <div class="product-btn" data-val="옹이 있음"><span data-i18n="pb7">옹이 있음</span></div>
+            <div class="product-btn" data-val="옹이 없음"><span data-i18n="pb8">옹이 없음</span></div>
           </div>
-          <p class="product-hint">선호 제품 선택 시 해당 특성에 맞는 제품을 추천해드립니다.</p>
+          <p class="product-hint" data-i18n="productDesc">선호 제품 선택 시 해당 특성에 맞는 제품을 추천해드립니다.</p>
         </div>
       </div>
     </div>
 
     <!-- ④ 전달 사항 -->
     <div class="form-section">
-      <div class="section-title">④ 전달 사항</div>
+      <div class="section-title" data-i18n="sec4">④ 전달 사항</div>
       <div class="field">
-        <label>기타 문의 및 전달 사항</label>
-        <textarea id="fMemo"></textarea>
+        <label data-i18n="memoLabel">기타 문의 및 전달 사항</label>
+        <textarea id="fMemo" data-i18n-placeholder="memoPh"></textarea>
       </div>
     </div>
 
     <!-- ⑤ 개인정보 동의 -->
     <div class="form-section">
-      <div class="section-title">⑤ 개인정보 활용 동의</div>
+      <div class="section-title" data-i18n="sec5">⑤ 개인정보 활용 동의</div>
       <div class="privacy-box">
-        수집하는 개인정보 항목 : 성함, 연락처, 주소, 시공 현장 정보 등<br>
-        수집 및 이용 목적 : 상담 예약 확인 및 시공 및 AS서비스 제공<br>
-        귀하는 개인정보 수집·이용에 대한 동의를 거부하실 수 있으나, 동의 거부 시 서비스 이용이 제한됩니다.
+        <span data-i18n="privacy1">수집하는 개인정보 항목 : 성함, 연락처, 주소, 시공 현장 정보 등</span><br>
+        <span data-i18n="privacy2">수집 및 이용 목적 : 상담 예약 확인 및 시공 및 AS서비스 제공</span><br>
+        <span data-i18n="privacy3">귀하는 개인정보 수집·이용에 대한 동의를 거부하실 수 있으나, 동의 거부 시 서비스 이용이 제한됩니다.</span>
       </div>
       <div class="toggle-row" id="privacyToggle">
         <div class="toggle-box" id="privacyBox"></div>
-        개인정보 수집 및 활용에 동의합니다. <span class="req" style="color:#c0392b;margin-left:2px;font-weight:700;">*</span>
+        <span data-i18n="privacyAgree">개인정보 수집 및 활용에 동의합니다.</span> <span class="req" style="color:#c0392b;margin-left:2px;font-weight:700;">*</span>
       </div>
       <span class="field-error" id="errPrivacy"></span>
     </div>
 
     <div class="submit-area">
-      <button class="btn-submit" id="btnSubmit">예약 접수하기</button>
+      <button class="btn-submit" id="btnSubmit" data-i18n="submitBtn">예약 접수하기</button>
     </div>
 
   </div><!-- /mainForm -->
 
   <div class="success-screen" id="successScreen">
     <div class="success-icon">✅</div>
-    <h2>예약 접수 완료</h2>
-    <p>
+    <h2 data-i18n="successTitle">예약 접수 완료</h2>
+    <p data-i18n="successDesc">
       상담 예약이 정상적으로 접수되었습니다.<br>
       담당자 확인 후 <strong>유선으로 연락</strong>드리겠습니다.<br><br>
       감사합니다. <strong>지복득마루</strong>
@@ -833,26 +834,111 @@
 // ─────────────────────────────────────────
 const I18N = {
   ko: {
-    title: '상담 예약', heroTitle: '상담 예약',
-    heroDesc: '원목마루는 빛과 공간에 따라 색감과 분위기가 달라지기 때문에 사진과 실제가 다르게 보일 수 있습니다.\n지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며 가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.',
-    dontShow: '오늘 하루 보지 않기', close: '닫기',
+    title:'상담 예약', heroTitle:'상담 예약',
+    heroDesc:'원목마루는 빛과 공간에 따라 색감과 분위기가 달라지기 때문에 사진과 실제가 다르게 보일 수 있습니다.\n지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며 가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.',
+    dontShow:'오늘 하루 보지 않기', close:'닫기',
+    noticeTitle:'안내사항', notice1:'· 당일 예약은 유선으로만 가능합니다. (02-576-7736)', notice2:'· 매장 상황에 따라 대기가 발생할 수 있습니다.',
+    sec1:'① 예약 일정', sec2:'② 예약자 정보', sec3:'③ 시공 정보', sec4:'④ 전달 사항', sec5:'⑤ 개인정보 활용 동의',
+    selectDate:'날짜를 선택해주세요', selectDatePh:'날짜를 선택해주세요',
+    visitorTypeLabel:'예약자 유형', vt1:'개인 소비자', vt2:'인테리어업체', vt3:'건축사무소', vt4:'건설사',
+    visitCountLabel:'방문 인원', vc1:'1명 (개인)', vc2:'2명', vc3:'3명', vc4:'4명', vc5:'5인 이상', revisit:'재방문',
+    nameLabel:'예약자 성함', namePh:'홍길동', phoneLabel:'연락처', phonePh:'010-0000-0000',
+    companyLabel:'업체명', companyHint:'인테리어 업체 / 턴키 업체 기입',
+    addressLabel:'현장 주소', addressPh:'서울시 강남구 **아파트 101동 1101호',
+    spaceTypeLabel:'공간 유형', st1:'아파트', st2:'빌라', st3:'주택', st4:'상가/상업공간', st5:'사무실', st6:'오피스텔',
+    sizeLabel:'평수', sizePh:'예: 35평', floorLabel:'층수', floorPh:'예: 3층',
+    elevLabel:'엘리베이터', elev1:'있음', elev2:'없음', workDateLabel:'마루 시공 예정일',
+    productLabel:'선호 제품', productHint:'(복수선택 가능)',
+    pb1:'밝은 마루', pb2:'내추럴 마루', pb3:'어두운 마루', pb4:'중폭\n(165mm)', pb5:'광폭\n(190mm)', pb6:'초광폭\n(240mm)', pb7:'옹이 있음', pb8:'옹이 없음',
+    productDesc:'선호 제품 선택 시 해당 특성에 맞는 제품을 추천해드립니다.',
+    memoLabel:'기타 문의 및 전달 사항', memoPh:'궁금한 점이나 전달하실 내용을 자유롭게 입력해주세요.',
+    privacy1:'수집하는 개인정보 항목 : 성함, 연락처, 주소, 시공 현장 정보 등',
+    privacy2:'수집 및 이용 목적 : 상담 예약 확인 및 시공 및 AS서비스 제공',
+    privacy3:'귀하는 개인정보 수집·이용에 대한 동의를 거부하실 수 있으나, 동의 거부 시 서비스 이용이 제한됩니다.',
+    privacyAgree:'개인정보 수집 및 활용에 동의합니다.',
+    submitBtn:'예약 접수하기', successTitle:'예약 접수 완료',
+    successDesc:'상담 예약이 정상적으로 접수되었습니다.<br>담당자 확인 후 <strong>유선으로 연락</strong>드리겠습니다.<br><br>감사합니다. <strong>지복득마루</strong>',
   },
   en: {
-    title: 'Consultation Booking', heroTitle: 'Consultation Booking',
-    heroDesc: 'The color and atmosphere of solid wood flooring can vary depending on light and space, so it may look different from photos.\nWe invite you to visit the Jibokdeuk Maru showroom to see, touch, and experience the wood in its most authentic form.',
-    dontShow: "Don't show today", close: 'Close',
+    title:'Consultation Booking', heroTitle:'Consultation Booking',
+    heroDesc:'The color and atmosphere of solid wood flooring can vary depending on light and space, so it may look different from photos.\nWe invite you to visit the Jibokdeuk Maru showroom to see, touch, and experience the wood in its most authentic form.',
+    dontShow:"Don't show today", close:'Close',
+    noticeTitle:'Notice', notice1:'· Same-day reservations are only available by phone. (02-576-7736)', notice2:'· Waiting may occur depending on showroom conditions.',
+    sec1:'① Schedule', sec2:'② Visitor Info', sec3:'③ Installation Info', sec4:'④ Message', sec5:'⑤ Privacy Agreement',
+    selectDate:'Please select a date', selectDatePh:'Please select a date',
+    visitorTypeLabel:'Visitor Type', vt1:'Individual', vt2:'Interior Company', vt3:'Architecture Office', vt4:'Construction Company',
+    visitCountLabel:'No. of Visitors', vc1:'1 Person', vc2:'2 Persons', vc3:'3 Persons', vc4:'4 Persons', vc5:'5+', revisit:'Return Visit',
+    nameLabel:'Name', namePh:'John Doe', phoneLabel:'Phone', phonePh:'+82-10-0000-0000',
+    companyLabel:'Company', companyHint:'Interior / Turnkey company',
+    addressLabel:'Site Address', addressPh:'Full address of the installation site',
+    spaceTypeLabel:'Space Type', st1:'Apartment', st2:'Villa', st3:'House', st4:'Commercial', st5:'Office', st6:'Officetel',
+    sizeLabel:'Size', sizePh:'e.g. 35 pyeong', floorLabel:'Floor', floorPh:'e.g. 3rd floor',
+    elevLabel:'Elevator', elev1:'Yes', elev2:'No', workDateLabel:'Planned Installation Date',
+    productLabel:'Preferred Product', productHint:'(Multiple selection)',
+    pb1:'Light Wood', pb2:'Natural Wood', pb3:'Dark Wood', pb4:'Medium\n(165mm)', pb5:'Wide\n(190mm)', pb6:'Extra Wide\n(240mm)', pb7:'With Knots', pb8:'Without Knots',
+    productDesc:'We will recommend products matching your preferences.',
+    memoLabel:'Additional Notes', memoPh:'Please enter any questions or special requests.',
+    privacy1:'Information collected: Name, contact, address, installation site info, etc.',
+    privacy2:'Purpose: Consultation scheduling and installation/AS service',
+    privacy3:'You may refuse consent, but service use will be restricted.',
+    privacyAgree:'I agree to the collection and use of personal information.',
+    submitBtn:'Submit Reservation', successTitle:'Reservation Submitted',
+    successDesc:'Your consultation reservation has been received.<br>We will contact you <strong>by phone</strong> after confirmation.<br><br>Thank you. <strong>Jibokdeuk Maru</strong>',
   },
   ja: {
-    title: 'ご予約', heroTitle: 'ご予約',
-    heroDesc: '無垢フローリングは光や空間によって色合いや雰囲気が異なるため、写真と実物が異なって見えることがあります。\nジボクドゥクマル ショールームで実際に目で確かめ、手で質感を感じ、本物の木材をぜひ体験してください。',
-    dontShow: '今日は表示しない', close: '閉じる',
+    title:'ご予約', heroTitle:'ご予約',
+    heroDesc:'無垢フローリングは光や空間によって色合いや雰囲気が異なるため、写真と実物が異なって見えることがあります。\nショールームで実際に目で確かめ、手で質感を感じ、本物の木材をぜひ体験してください。',
+    dontShow:'今日は表示しない', close:'閉じる',
+    noticeTitle:'ご案内', notice1:'· 当日予約はお電話のみ受け付けております。(02-576-7736)', notice2:'· 店舗状況によりお待ちいただく場合がございます。',
+    sec1:'① 予約日程', sec2:'② 予約者情報', sec3:'③ 施工情報', sec4:'④ メッセージ', sec5:'⑤ 個人情報同意',
+    selectDate:'日付を選択してください', selectDatePh:'日付を選択してください',
+    visitorTypeLabel:'予約者タイプ', vt1:'個人のお客様', vt2:'インテリア業者', vt3:'建築事務所', vt4:'建設会社',
+    visitCountLabel:'来店人数', vc1:'1名', vc2:'2名', vc3:'3名', vc4:'4名', vc5:'5名以上', revisit:'再来店',
+    nameLabel:'お名前', namePh:'山田 太郎', phoneLabel:'電話番号', phonePh:'+82-10-0000-0000',
+    companyLabel:'会社名', companyHint:'インテリア/ターンキー業者',
+    addressLabel:'現場住所', addressPh:'施工現場の住所を入力',
+    spaceTypeLabel:'スペースタイプ', st1:'マンション', st2:'ヴィラ', st3:'一戸建て', st4:'商業施設', st5:'オフィス', st6:'オフィステル',
+    sizeLabel:'面積', sizePh:'例：35坪', floorLabel:'階数', floorPh:'例：3階',
+    elevLabel:'エレベーター', elev1:'あり', elev2:'なし', workDateLabel:'施工予定日',
+    productLabel:'希望製品', productHint:'（複数選択可）',
+    pb1:'明るい床材', pb2:'ナチュラル床材', pb3:'ダーク床材', pb4:'中幅\n(165mm)', pb5:'広幅\n(190mm)', pb6:'超広幅\n(240mm)', pb7:'節あり', pb8:'節なし',
+    productDesc:'ご希望に合った製品をご提案いたします。',
+    memoLabel:'その他ご要望', memoPh:'ご質問やご要望をご自由にお書きください。',
+    privacy1:'収集する個人情報：氏名、連絡先、住所、施工現場情報など',
+    privacy2:'利用目的：予約確認および施工・アフターサービスの提供',
+    privacy3:'同意を拒否することができますが、拒否した場合サービスのご利用が制限されます。',
+    privacyAgree:'個人情報の収集および利用に同意します。',
+    submitBtn:'予約を申し込む', successTitle:'予約受付完了',
+    successDesc:'ご予約が正常に受け付けられました。<br>担当者確認後、<strong>お電話</strong>にてご連絡いたします。<br><br>ありがとうございます。<strong>ジボクドゥクマル</strong>',
   },
   zh: {
-    title: '预约咨询', heroTitle: '预约咨询',
-    heroDesc: '实木地板因光线和空间不同，色调和氛围也会有所差异，实物可能与照片有所不同。\n欢迎您亲自前往지복득마루展厅，用眼睛确认，用手感受质感，体验最真实的原木。',
-    dontShow: '今日不再显示', close: '关闭',
+    title:'预约咨询', heroTitle:'预约咨询',
+    heroDesc:'实木地板因光线和空间不同，色调和氛围也会有所差异，实物可能与照片有所不同。\n欢迎亲自前往展厅，用眼睛确认，用手感受质感，体验最真实的原木。',
+    dontShow:'今日不再显示', close:'关闭',
+    noticeTitle:'注意事项', notice1:'· 当日预约仅接受电话预约。(02-576-7736)', notice2:'· 根据展厅情况，可能需要等待。',
+    sec1:'① 预约日程', sec2:'② 预约者信息', sec3:'③ 施工信息', sec4:'④ 留言', sec5:'⑤ 个人信息同意',
+    selectDate:'请选择日期', selectDatePh:'请选择日期',
+    visitorTypeLabel:'访客类型', vt1:'个人消费者', vt2:'室内装修公司', vt3:'建筑事务所', vt4:'建设公司',
+    visitCountLabel:'来访人数', vc1:'1人', vc2:'2人', vc3:'3人', vc4:'4人', vc5:'5人以上', revisit:'再次来访',
+    nameLabel:'姓名', namePh:'张三', phoneLabel:'联系方式', phonePh:'+82-10-0000-0000',
+    companyLabel:'公司名称', companyHint:'室内装修/整包公司',
+    addressLabel:'施工地址', addressPh:'请输入施工现场地址',
+    spaceTypeLabel:'空间类型', st1:'公寓', st2:'别墅', st3:'住宅', st4:'商业空间', st5:'办公室', st6:'商住两用',
+    sizeLabel:'面积', sizePh:'例：35坪', floorLabel:'楼层', floorPh:'例：3楼',
+    elevLabel:'电梯', elev1:'有', elev2:'无', workDateLabel:'计划施工日期',
+    productLabel:'偏好产品', productHint:'（可多选）',
+    pb1:'浅色木地板', pb2:'自然色木地板', pb3:'深色木地板', pb4:'中幅\n(165mm)', pb5:'宽幅\n(190mm)', pb6:'超宽幅\n(240mm)', pb7:'有节疤', pb8:'无节疤',
+    productDesc:'选择偏好产品后，我们将为您推荐最合适的产品。',
+    memoLabel:'其他留言', memoPh:'请自由填写您的问题或特别要求。',
+    privacy1:'收集的个人信息：姓名、联系方式、地址、施工现场信息等',
+    privacy2:'收集目的：预约确认及施工/售后服务提供',
+    privacy3:'您可拒绝同意，但拒绝后服务使用将受到限制。',
+    privacyAgree:'我同意收集和使用个人信息。',
+    submitBtn:'提交预约', successTitle:'预约提交完成',
+    successDesc:'您的咨询预约已成功提交。<br>工作人员确认后将<strong>电话联系</strong>您。<br><br>感谢您。<strong>지복득마루</strong>',
   },
 };
+
 
 let currentLang = 'ko';
 
