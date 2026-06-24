@@ -564,6 +564,7 @@
 
 <header class="site-header">
   <div class="brand">J I B O K D E U K M A R U</div>
+  <h1 data-i18n="title">상담 예약</h1>
   <div class="lang-bar">
     <button class="lang-btn active" onclick="setLang('ko')">한국어</button>
     <button class="lang-btn" onclick="setLang('en')">EN</button>
@@ -1003,10 +1004,10 @@ async function loadMonthlyNotice() {
     if (data.status === 'ok' && data.notice) {
       let noticeText = '';
       try {
-        // 월별 JSON 형식 처리
         const monthData = JSON.parse(data.notice);
-        const currentMonth = String(new Date().getMonth() + 1);
-        noticeText = monthData[currentMonth] || '';
+        const now = new Date();
+        const key = `${now.getFullYear()}_${now.getMonth() + 1}`;
+        noticeText = monthData[key] || monthData[String(now.getMonth() + 1)] || '';
       } catch(e) {
         // 구 형식(HTML 문자열) 폴백
         noticeText = data.notice;
