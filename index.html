@@ -104,7 +104,7 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    text-align: center;
+    text-align: left;
     padding: 32px 40px;
   }
   .hero-title {
@@ -869,7 +869,7 @@ const I18N = {
     privacy3:'귀하는 개인정보 수집·이용에 대한 동의를 거부하실 수 있으나, 동의 거부 시 서비스 이용이 제한됩니다.',
     privacyAgree:'개인정보 수집 및 활용에 동의합니다.',
     submitBtn:'예약 접수하기', successTitle:'예약 접수 완료',
-    successDesc:'상담 예약이 정상적으로 접수되었습니다.<br>담당자 확인 후 <strong>유선으로 연락</strong>드리겠습니다.<br><br>감사합니다. <strong>지복득마루</strong>',
+    successDesc:'상담 예약이 정상적으로 접수되었습니다.<br>예약 확정시 회신 문자를 보내드립니다.<br>문의 : 02-516-7736 / 010-5264-7736<br><br>감사합니다. <strong>지복득마루</strong>',
   },
   en: {
     title:'Consultation Booking', heroTitle:'Consultation Booking',
@@ -895,7 +895,7 @@ const I18N = {
     privacy3:'You may refuse consent, but service use will be restricted.',
     privacyAgree:'I agree to the collection and use of personal information.',
     submitBtn:'Submit Reservation', successTitle:'Reservation Submitted',
-    successDesc:'Your consultation reservation has been received.<br>We will contact you <strong>by phone</strong> after confirmation.<br><br>Thank you. <strong>Jibokdeuk Maru</strong>',
+    successDesc:'Your reservation has been received.<br>We will send a confirmation text message.<br>Inquiry : 02-516-7736 / 010-5264-7736<br><br>Thank you. <strong>Jibokdeuk Maru</strong>',
   },
   ja: {
     title:'ご予約', heroTitle:'ご予約',
@@ -921,7 +921,7 @@ const I18N = {
     privacy3:'同意を拒否することができますが、拒否した場合サービスのご利用が制限されます。',
     privacyAgree:'個人情報の収集および利用に同意します。',
     submitBtn:'予約を申し込む', successTitle:'予約受付完了',
-    successDesc:'ご予約が正常に受け付けられました。<br>担当者確認後、<strong>お電話</strong>にてご連絡いたします。<br><br>ありがとうございます。<strong>ジボクドゥクマル</strong>',
+    successDesc:'ご予約が正常に受け付けられました。<br>確定後、確認SMSをお送りします。<br>お問い合わせ : 02-516-7736 / 010-5264-7736<br><br>ありがとうございます。<strong>ジボクドゥクマル</strong>',
   },
   zh: {
     title:'预约咨询', heroTitle:'预约咨询',
@@ -947,7 +947,7 @@ const I18N = {
     privacy3:'您可拒绝同意，但拒绝后服务使用将受到限制。',
     privacyAgree:'我同意收集和使用个人信息。',
     submitBtn:'提交预约', successTitle:'预约提交完成',
-    successDesc:'您的咨询预约已成功提交。<br>工作人员确认后将<strong>电话联系</strong>您。<br><br>感谢您。<strong>지복득마루</strong>',
+    successDesc:'您的咨询预约已成功提交。<br>预约确认后将发送确认短信。<br>咨询 : 02-516-7736 / 010-5264-7736<br><br>感谢您。<strong>지복득마루</strong>',
   },
 };
 
@@ -1421,7 +1421,8 @@ function showSuccess(receiptNo) {
     <div class="success-icon">✅</div>
     <h2>쇼룸 상담 예약이 정상적으로 접수되었습니다.</h2>
     <p>
-      예약 확정시 회신 메일을 보내드리겠습니다.<br><br>
+      예약 확정시 회신 문자를 보내드립니다.<br>
+      문의 : 02-516-7736 / 010-5264-7736<br><br>
       감사합니다. <strong>지복득마루</strong>
     </p>
   `;
