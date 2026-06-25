@@ -590,7 +590,7 @@
 <div class="hero-section">
   <img src="https://raw.githubusercontent.com/chiwoo3292-sudo/JBDSTOCK/refs/heads/main/%EC%98%88%EC%95%BD%ED%8F%BC%EC%9D%B4%EB%AF%B8%EC%A7%80.avif" alt="지복득마루 쇼룸" class="hero-img">
   <div class="hero-overlay">
-    <p class="hero-desc" data-i18n="heroDesc">원목마루는 빛과 공간에 따라 색감과 분위기가 달라지기 때문에 사진과 실제가 다르게 보일 수 있습니다.<br>지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며 가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.</p>
+    <p class="hero-desc" data-i18n="heroDesc">원목마루는 빛과 공간에 따라 색감과 분위기가 달라지기 때문에<br>사진과 실제가 다르게 보일 수 있습니다.<br>지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며<br>가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.</p>
   </div>
 </div>
 
@@ -1001,6 +1001,8 @@ function setLang(lang) {
   }
 
   document.documentElement.lang = lang;
+  // 달력도 언어에 맞게 다시 렌더링
+  if (typeof renderCalendar === 'function') renderCalendar();
 }
 
 // ─────────────────────────────────────────
@@ -1096,12 +1098,28 @@ function initCalendar() {
 
 function renderCalendar() {
   const label = document.getElementById('calMonthLabel');
-  label.textContent = `${curYear}년 ${curMonth + 1}월`;
+  const lang = currentLang || 'ko';
+
+  // 언어별 월 표시
+  const monthLabels = {
+    ko: `${curYear}년 ${curMonth + 1}월`,
+    en: ['January','February','March','April','May','June','July','August','September','October','November','December'][curMonth] + ` ${curYear}`,
+    ja: `${curYear}年 ${curMonth + 1}月`,
+    zh: `${curYear}年 ${curMonth + 1}月`,
+  };
+  label.textContent = monthLabels[lang] || monthLabels.ko;
 
   const grid = document.getElementById('calGrid');
   grid.innerHTML = '';
 
-  const days = ['일','월','화','수','목','금','토'];
+  // 언어별 요일
+  const dayLabels = {
+    ko: ['일','월','화','수','목','금','토'],
+    en: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+    ja: ['日','月','火','水','木','金','土'],
+    zh: ['日','一','二','三','四','五','六'],
+  };
+  const days = dayLabels[lang] || dayLabels.ko;
   days.forEach((d, i) => {
     const el = document.createElement('div');
     el.className = 'cal-day-label' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '');
@@ -1403,7 +1421,7 @@ function showSuccess(receiptNo) {
     <div class="success-icon">✅</div>
     <h2>쇼룸 상담 예약이 정상적으로 접수되었습니다.</h2>
     <p>
-      예약 확정시 문자가 발송됩니다.<br><br>
+      예약 확정시 회신 메일을 보내드리겠습니다.<br><br>
       감사합니다. <strong>지복득마루</strong>
     </p>
   `;
