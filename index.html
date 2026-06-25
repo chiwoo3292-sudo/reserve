@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>상담 예약 | 지복득마루</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #f7f6f4;
+    --bg: #f5f3ef;
     --white: #ffffff;
     --ink: #1a1a1a;
     --ink-light: #555;
@@ -22,7 +22,8 @@
     --border-focus: #2b4a3e;
     --error: #c0392b;
     --radius: 6px;
-    --font: 'Noto Sans KR', sans-serif;
+    --font: 'Noto Serif KR', 'Georgia', '바탕', serif;
+    --font-ui: 'Noto Sans KR', sans-serif;
   }
 
   body {
@@ -65,7 +66,7 @@
     gap: 6px;
     margin-top: 4px;
   }
-  .lang-btn {
+  .lang-btn { font-family: var(--font-ui);
     padding: 4px 12px;
     border: 1px solid var(--border);
     border-radius: 999px;
@@ -104,40 +105,35 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    text-align: center;
-    padding: 32px 40px;
+    padding: 40px 24px;
+  }
+  .hero-content {
+    width: 100%;
+    max-width: 680px;
+    text-align: left;
   }
   .hero-title {
-    font-size: 32px;
+    font-size: 36px;
     font-weight: 700;
     color: #fff;
-    margin-bottom: 16px;
-    letter-spacing: 0.04em;
+    margin-bottom: 20px;
+    letter-spacing: 0.02em;
+    font-family: var(--font);
   }
   .hero-desc {
-    font-size: 16px;
-    color: rgba(255,255,255,0.92);
-    line-height: 2;
-    font-family: 'Georgia', '바탕', 'Batang', 'Times New Roman', serif;
+    font-size: 15px;
+    color: rgba(255,255,255,0.88);
+    line-height: 1.9;
+    font-family: var(--font);
     font-weight: 400;
     word-break: keep-all;
-    overflow-wrap: break-word;
-    max-width: 640px;
-    text-align: center;
+    text-align: left;
   }
   @media (max-width: 600px) {
     .hero-img { height: 260px; }
-    .hero-title { font-size: 22px; }
-    .hero-desc {
-      font-size: 13.5px;
-      line-height: 1.95;
-      word-break: keep-all;
-      overflow-wrap: break-word;
-      /* 모바일: 문장 단위로 자연스럽게 줄바꿈 */
-      text-align: justify;
-      hyphens: auto;
-    }
-    .hero-overlay { padding: 20px 20px; }
+    .hero-title { font-size: 24px; }
+    .hero-desc { font-size: 13px; line-height: 1.8; }
+    .hero-overlay { padding: 24px 24px; }
   }
 
   /* NOTICE */
@@ -151,11 +147,12 @@
     font-size: 13px;
     color: var(--ink-light);
     line-height: 1.7;
+    font-family: var(--font);
   }
-  .notice-bar strong { color: var(--accent); }
+  .notice-bar strong { color: var(--accent); font-family: var(--font); }
 
   /* FORM WRAPPER */
-  .form-wrap {
+  .form-wrap { font-family: var(--font);
     max-width: 680px;
     margin: 0 auto 60px;
     padding: 0 16px;
@@ -351,7 +348,7 @@
     gap: 8px;
     margin-top: 2px;
   }
-  .space-btn {
+  .space-btn { font-family: var(--font-ui);
     border: 1px solid var(--border);
     border-radius: 20px;
     padding: 8px 10px;
@@ -388,7 +385,7 @@
     gap: 8px;
     margin-top: 4px;
   }
-  .product-btn {
+  .product-btn { font-family: var(--font-ui);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 10px 8px;
@@ -419,7 +416,7 @@
 
   /* SUBMIT */
   .submit-area { text-align: center; margin-top: 8px; }
-  .btn-submit {
+  .btn-submit { font-family: var(--font-ui);
     background: var(--accent);
     color: #fff;
     border: none;
@@ -576,23 +573,16 @@
   <span>접수 중입니다...</span>
 </div>
 
-<header class="site-header">
-  <div class="brand">J I B O K D E U K M A R U</div>
-  <h1 data-i18n="title">상담 예약</h1>
-  <div class="lang-bar">
-    <button class="lang-btn active" onclick="setLang('ko')">한국어</button>
-    <button class="lang-btn" onclick="setLang('en')">EN</button>
-    <button class="lang-btn" onclick="setLang('ja')">日本語</button>
-    <button class="lang-btn" onclick="setLang('zh')">中文</button>
-  </div>
-</header>
+<header class="site-header" style="display:none;"></header>
 
 <!-- 히어로 이미지 섹션 -->
 <div class="hero-section">
   <img src="https://raw.githubusercontent.com/chiwoo3292-sudo/JBDSTOCK/refs/heads/main/%EC%98%88%EC%95%BD%ED%8F%BC%EC%9D%B4%EB%AF%B8%EC%A7%80.avif" alt="지복득마루 쇼룸" class="hero-img">
   <div class="hero-overlay">
-    <h2 class="hero-title" data-i18n="heroTitle">상담 예약</h2>
-    <p class="hero-desc" data-i18n="heroDesc">원목마루는 빛과 공간에 따라 색감과 분위기가 달라지기 때문에<br>사진과 실제가 다르게 보일 수 있습니다.<br>지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며<br>가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.</p>
+    <div class="hero-content">
+      <h2 class="hero-title" data-i18n="heroTitle">상담 예약</h2>
+      <p class="hero-desc" data-i18n="heroDesc">원목마루는 빛과 공간에 따라 색감과 분위기가 달라지기 때문에 사진과 실제가 다르게 보일 수 있습니다. 지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며 가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.</p>
+    </div>
   </div>
 </div>
 
@@ -614,6 +604,14 @@
 </div>
 
 <div class="form-wrap">
+
+  <!-- 언어 선택 -->
+  <div class="lang-bar" style="justify-content:flex-start;margin-bottom:16px;padding-top:8px;">
+    <button class="lang-btn active" onclick="setLang('ko')">한국어</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('ja')">日本語</button>
+    <button class="lang-btn" onclick="setLang('zh')">中文</button>
+  </div>
 
   <div class="notice-bar">
     <strong data-i18n="noticeTitle">안내사항</strong><br>
@@ -849,7 +847,7 @@
 const I18N = {
   ko: {
     title:'상담 예약', heroTitle:'상담 예약',
-    heroDesc:'원목마루는 빛과 공간에 따라 색감과 분위기가 달라지기 때문에\n사진과 실제가 다르게 보일 수 있습니다.\n지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며\n가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.',
+    heroDesc:'원목마루는 빛과 공간에 따라 색감과 분위기가 달라지기 때문에 사진과 실제가 다르게 보일 수 있습니다. 지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며 가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.',
     dontShow:'오늘 하루 보지 않기', close:'닫기',
     noticeTitle:'안내사항', notice1:'· 당일 예약은 유선으로만 가능합니다. (02-576-7736)', notice2:'· 매장 상황에 따라 대기가 발생할 수 있습니다.',
     sec1:'① 예약 일정', sec2:'② 예약자 정보', sec3:'③ 시공 정보', sec4:'④ 전달 사항', sec5:'⑤ 개인정보 활용 동의',
