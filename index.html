@@ -974,50 +974,24 @@ function setLang(lang) {
 // 월별 휴무안내 팝업
 // ─────────────────────────────────────────
 async function loadMonthlyNotice() {
-  const skipUntil = localStorage.getItem('jbd_notice_skip');
-  if (skipUntil && new Date() < new Date(skipUntil)) return;
-
   try {
     const res = await fetch(`${APPS_SCRIPT_URL}?action=getMonthlyNotice`);
     const data = await res.json();
-    if (data.status === 'ok' && data.notice) {
-      let noticeText = '';
-      try {
-        const monthData = JSON.parse(data.notice);
-        const now = new Date();
-        const key = `${now.getFullYear()}_${now.getMonth() + 1}`;
-        noticeText = monthData[key] || monthData[String(now.getMonth() + 1)] || '';
-      } catch(e) {
-        // 구 형식(HTML 문자열) 폴백
-        noticeText = data.notice;
-      }
+    if (data.status === 'ok' && data.notices) {
+      const now = new Date();
+      const key = `${now.getFullYear()}_${now.getMonth() + 1}`;
+      const noticeText = data.notices[key] || '';
       if (!noticeText) return;
-      const content = document.getElementById('monthlyNoticeContent');
-      if (content) {
-        const month = new Date().getMonth() + 1;
-        content.innerHTML = `
-          <h3 style="font-size:20px;font-weight:800;color:#222;margin-bottom:8px;">${month}월</h3>
-          <p style="font-size:13px;color:#555;line-height:1.8;">${noticeText.replace(/\n/g,'<br>')}</p>
-        `;
-        document.getElementById('monthlyNoticeModal').style.display = 'flex';
+      const bar = document.getElementById('monthlyNoticeBar');
+      const text = document.getElementById('monthlyNoticeText');
+      if (bar && text) {
+        text.innerHTML = noticeText.replace(/\n/g, '<br>');
+        bar.style.display = 'block';
       }
     }
   } catch(e) { /* 조용히 무시 */ }
-}
 
-window.closeMonthlyNotice = function() {
-  document.getElementById('monthlyNoticeModal').style.display = 'none';
-};
-
-window.handleDontShow = function(cb) {
-  if (cb.checked) {
-    const tomorrow = new Date();
-    tomorrow.setHours(23, 59, 59, 0);
-    localStorage.setItem('jbd_notice_skip', tomorrow.toISOString());
-  } else {
-    localStorage.removeItem('jbd_notice_skip');
-  }
-};
+window.closeMonthlyNotice = function() {};
 
 // ─────────────────────────────────────────
 // APPS SCRIPT URL (배포 후 여기에 입력)
