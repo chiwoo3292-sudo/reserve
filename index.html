@@ -1344,9 +1344,7 @@ async function submitForm() {
 
     // 신규 트리거: 이메일 발송
     const emailParams = new URLSearchParams({ action: 'sendEmail', ...payload });
-    const emailRes = await fetch(`${APPS_SCRIPT_URL}?${emailParams.toString()}`);
-    const emailResult = await emailRes.json();
-    console.log('이메일 결과:', JSON.stringify(emailResult));
+    await fetch(`${APPS_SCRIPT_URL}?${emailParams.toString()}`).catch(() => {});
 
     if (result.status === 'ok') showSuccess(result.receiptNo);
     else throw new Error(result.message || '오류가 발생했습니다.');
