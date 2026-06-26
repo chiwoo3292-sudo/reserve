@@ -15,15 +15,15 @@
     --ink: #1a1a1a;
     --ink-light: #555;
     --ink-muted: #999;
-    --accent: #2b4a3e;
-    --accent-light: #3d6b5c;
-    --accent-bg: #edf2f0;
+    --accent: #7a5c44;
+    --accent-light: #9b7355;
+    --accent-bg: #f5ede6;
     --border: #ddd;
     --border-focus: #2b4a3e;
     --error: #c0392b;
     --radius: 6px;
     --font: 'Noto Serif KR', 'Georgia', '바탕', serif;
-    --font-ui: 'Noto Sans KR', sans-serif;
+    --font-ui: 'Noto Serif KR', 'Georgia', '바탕', serif;
   }
 
   body {
@@ -724,38 +724,10 @@
         </div>
       </div>
 
-      <div class="field-row full" style="margin-bottom:12px;">
-        <div class="field">
-          <label data-i18n="spaceTypeLabel">공간 유형</label>
-          <div class="space-type-grid" id="spaceTypeGroup">
-            <div class="space-btn active" data-val="아파트"><span data-i18n="st1">아파트</span></div>
-            <div class="space-btn" data-val="빌라"><span data-i18n="st2">빌라</span></div>
-            <div class="space-btn" data-val="주택"><span data-i18n="st3">주택</span></div>
-            <div class="space-btn" data-val="상가/상업공간"><span data-i18n="st4">상가/상업공간</span></div>
-            <div class="space-btn" data-val="사무실"><span data-i18n="st5">사무실</span></div>
-            <div class="space-btn" data-val="오피스텔"><span data-i18n="st6">오피스텔</span></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="field-row">
+      <div class="field-row full">
         <div class="field">
           <label data-i18n="sizeLabel">평수</label>
           <input type="text" id="fSize" data-i18n-placeholder="sizePh" placeholder="예: 35평">
-        </div>
-        <div class="field">
-          <label data-i18n="floorLabel">층수</label>
-          <input type="text" id="fFloor" data-i18n-placeholder="floorPh" placeholder="예: 3층">
-        </div>
-      </div>
-
-      <div class="field-row full" style="margin-bottom:12px;">
-        <div class="field">
-          <label data-i18n="elevLabel">엘리베이터</label>
-          <div class="elev-group" id="elevGroup">
-            <div class="elev-btn active" data-val="있음"><span data-i18n="elev1">있음</span></div>
-            <div class="elev-btn" data-val="없음"><span data-i18n="elev2">없음</span></div>
-          </div>
         </div>
       </div>
 
@@ -782,18 +754,8 @@
 
       <div class="field-row full">
         <div class="field">
-          <label data-i18n="productLabel">선호 제품 <span style="font-size:11px;color:var(--ink-muted);"><span data-i18n="productHint">(복수선택 가능)</span></span></label>
-          <div class="product-grid" id="productGrid">
-            <div class="product-btn" data-val="밝은 마루"><span data-i18n="pb1">밝은 마루</span></div>
-            <div class="product-btn" data-val="내추럴 마루"><span data-i18n="pb2">내추럴 마루</span></div>
-            <div class="product-btn" data-val="어두운 마루"><span data-i18n="pb3">어두운 마루</span></div>
-            <div class="product-btn" data-val="중폭 (165mm)"><span data-i18n="pb4">중폭<br>(165mm)</span></div>
-            <div class="product-btn" data-val="광폭 (190mm)"><span data-i18n="pb5">광폭<br>(190mm)</span></div>
-            <div class="product-btn" data-val="초광폭 (240mm)"><span data-i18n="pb6">초광폭<br>(240mm)</span></div>
-            <div class="product-btn" data-val="옹이 있음"><span data-i18n="pb7">옹이 있음</span></div>
-            <div class="product-btn" data-val="옹이 없음"><span data-i18n="pb8">옹이 없음</span></div>
-          </div>
-          <p class="product-hint" data-i18n="productDesc">선호 제품 선택 시 해당 특성에 맞는 제품을 추천해드립니다.</p>
+          <label data-i18n="workPeriodLabel">공사 기간</label>
+          <input type="text" id="fWorkPeriod" data-i18n-placeholder="workPeriodPh" placeholder="예: 2주, 10/1~10/14">
         </div>
       </div>
     </div>
@@ -860,6 +822,7 @@ const I18N = {
     spaceTypeLabel:'공간 유형', st1:'아파트', st2:'빌라', st3:'주택', st4:'상가/상업공간', st5:'사무실', st6:'오피스텔',
     sizeLabel:'평수', sizePh:'예: 35평', floorLabel:'층수', floorPh:'예: 3층',
     elevLabel:'엘리베이터', elev1:'있음', elev2:'없음', workDateLabel:'마루 시공 예정일',
+    workPeriodLabel:'공사 기간', workPeriodPh:'예: 2주, 10/1~10/14',
     productLabel:'선호 제품', productHint:'(복수선택 가능)',
     pb1:'밝은 마루', pb2:'내추럴 마루', pb3:'어두운 마루', pb4:'중폭\n(165mm)', pb5:'광폭\n(190mm)', pb6:'초광폭\n(240mm)', pb7:'옹이 있음', pb8:'옹이 없음',
     productDesc:'선호 제품 선택 시 해당 특성에 맞는 제품을 추천해드립니다.',
@@ -886,6 +849,7 @@ const I18N = {
     spaceTypeLabel:'Space Type', st1:'Apartment', st2:'Villa', st3:'House', st4:'Commercial', st5:'Office', st6:'Officetel',
     sizeLabel:'Size', sizePh:'e.g. 35 pyeong', floorLabel:'Floor', floorPh:'e.g. 3rd floor',
     elevLabel:'Elevator', elev1:'Yes', elev2:'No', workDateLabel:'Planned Installation Date',
+    workPeriodLabel:'Construction Period', workPeriodPh:'e.g. 2 weeks, 10/1~10/14',
     productLabel:'Preferred Product', productHint:'(Multiple selection)',
     pb1:'Light Wood', pb2:'Natural Wood', pb3:'Dark Wood', pb4:'Medium\n(165mm)', pb5:'Wide\n(190mm)', pb6:'Extra Wide\n(240mm)', pb7:'With Knots', pb8:'Without Knots',
     productDesc:'We will recommend products matching your preferences.',
@@ -912,6 +876,7 @@ const I18N = {
     spaceTypeLabel:'スペースタイプ', st1:'マンション', st2:'ヴィラ', st3:'一戸建て', st4:'商業施設', st5:'オフィス', st6:'オフィステル',
     sizeLabel:'面積', sizePh:'例：35坪', floorLabel:'階数', floorPh:'例：3階',
     elevLabel:'エレベーター', elev1:'あり', elev2:'なし', workDateLabel:'施工予定日',
+    workPeriodLabel:'工事期間', workPeriodPh:'例：2週間、10/1〜10/14',
     productLabel:'希望製品', productHint:'（複数選択可）',
     pb1:'明るい床材', pb2:'ナチュラル床材', pb3:'ダーク床材', pb4:'中幅\n(165mm)', pb5:'広幅\n(190mm)', pb6:'超広幅\n(240mm)', pb7:'節あり', pb8:'節なし',
     productDesc:'ご希望に合った製品をご提案いたします。',
@@ -938,6 +903,7 @@ const I18N = {
     spaceTypeLabel:'空间类型', st1:'公寓', st2:'别墅', st3:'住宅', st4:'商业空间', st5:'办公室', st6:'商住两用',
     sizeLabel:'面积', sizePh:'例：35坪', floorLabel:'楼层', floorPh:'例：3楼',
     elevLabel:'电梯', elev1:'有', elev2:'无', workDateLabel:'计划施工日期',
+    workPeriodLabel:'施工期间', workPeriodPh:'例：2周、10/1~10/14',
     productLabel:'偏好产品', productHint:'（可多选）',
     pb1:'浅色木地板', pb2:'自然色木地板', pb3:'深色木地板', pb4:'中幅\n(165mm)', pb5:'宽幅\n(190mm)', pb6:'超宽幅\n(240mm)', pb7:'有节疤', pb8:'无节疤',
     productDesc:'选择偏好产品后，我们将为您推荐最合适的产品。',
@@ -1081,10 +1047,9 @@ const SLOT_CONFIG = {
 // STATE
 // ─────────────────────────────────────────
 let curYear, curMonth, selectedDate = null, selectedTime = null;
-let revisit = false, privacyAgree = false, elevator = '있음';
-let visitorType = '개인 소비자', visitCount = '1명', spaceType = '아파트';
-let selectedProducts = new Set();
-let bookedSlots = {}; // { "YYYY-MM-DD": ["10:00~11:00"] } 이미 예약된 슬롯
+let revisit = false, privacyAgree = false;
+let visitorType = '개인 소비자', visitCount = '1명';
+let bookedSlots = {};
 
 // ─────────────────────────────────────────
 // CALENDAR
@@ -1257,15 +1222,6 @@ function bindRadioGroup(groupId, onChange) {
 bindRadioGroup('visitorTypeGroup', v => visitorType = v);
 bindRadioGroup('visitCountGroup', v => visitCount = v);
 
-// 공간유형 - space-btn 방식
-document.getElementById('spaceTypeGroup').querySelectorAll('.space-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.getElementById('spaceTypeGroup').querySelectorAll('.space-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    spaceType = btn.dataset.val;
-  });
-});
-
 document.getElementById('revisitToggle').addEventListener('click', () => {
   revisit = !revisit;
   document.getElementById('revisitBox').className = 'toggle-box' + (revisit ? ' checked' : '');
@@ -1275,22 +1231,6 @@ document.getElementById('privacyToggle').addEventListener('click', () => {
   privacyAgree = !privacyAgree;
   document.getElementById('privacyBox').className = 'toggle-box' + (privacyAgree ? ' checked' : '');
   document.getElementById('errPrivacy').textContent = '';
-});
-
-document.getElementById('elevGroup').querySelectorAll('.elev-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.getElementById('elevGroup').querySelectorAll('.elev-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    elevator = btn.dataset.val;
-  });
-});
-
-document.getElementById('productGrid').querySelectorAll('.product-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const v = btn.dataset.val;
-    if (selectedProducts.has(v)) { selectedProducts.delete(v); btn.classList.remove('active'); }
-    else { selectedProducts.add(v); btn.classList.add('active'); }
-  });
 });
 
 // 전화번호 자동 하이픈
@@ -1387,12 +1327,9 @@ async function submitForm() {
     phone: document.getElementById('fPhone').value.trim(),
     company: document.getElementById('fCompany').value.trim(),
     address: document.getElementById('fAddress').value.trim(),
-    spaceType,
     size: document.getElementById('fSize').value.trim(),
-    floor: document.getElementById('fFloor').value.trim(),
-    elevator,
     workDate: document.getElementById('fWorkDate').value.trim(),
-    products: [...selectedProducts].join(', '),
+    workPeriod: document.getElementById('fWorkPeriod').value.trim(),
     memo: document.getElementById('fMemo').value.trim(),
     submittedAt: new Date().toLocaleString('ko-KR'),
   };
@@ -1400,10 +1337,15 @@ async function submitForm() {
   document.getElementById('loadingOverlay').classList.add('show');
 
   try {
-    // Apps Script는 GET 방식으로 호출 (CORS 문제 해결)
+    // 기존 트리거: 구글시트 업로드 및 알람
     const params = new URLSearchParams({ action: 'submit', ...payload });
     const res = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`);
     const result = await res.json();
+
+    // 신규 트리거: 이메일 발송
+    const emailParams = new URLSearchParams({ action: 'sendEmail', ...payload });
+    fetch(`${APPS_SCRIPT_URL}?${emailParams.toString()}`).catch(() => {});
+
     if (result.status === 'ok') showSuccess(result.receiptNo);
     else throw new Error(result.message || '오류가 발생했습니다.');
   } catch (e) {
