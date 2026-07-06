@@ -3,6 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+// ── 윅스(Wix) iframe 스케일링 보정 (ERP코드.txt와 동일 로직) ──
+(function () {
+  try {
+    if (window.self === window.top) return;
+    var realWidth = (window.screen && window.screen.width) ? window.screen.width : 0;
+    if (!realWidth || realWidth > 900) return;
+    var check = function () {
+      var renderedWidth = document.documentElement.clientWidth;
+      if (renderedWidth > realWidth * 1.25) {
+        var meta = document.querySelector('meta[name="viewport"]');
+        if (meta) {
+          meta.setAttribute('content', 'width=' + realWidth + ', initial-scale=1.0');
+        }
+      }
+    };
+    check();
+    document.addEventListener('DOMContentLoaded', check);
+    window.addEventListener('load', check);
+  } catch (e) { /* 보정 실패해도 페이지 자체는 정상 동작해야 하므로 무시 */ }
+})();
+</script>
 <title>상담 예약 | 지복득마루</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
@@ -234,6 +256,23 @@
   .cal-cell.disabled { color: var(--ink-muted); cursor: not-allowed; opacity: 0.4; }
   .cal-cell.empty { cursor: default; }
   .cal-cell.closed { color: var(--ink-muted); cursor: not-allowed; text-decoration: line-through; opacity: 0.4; }
+  .cal-cell.holiday {
+    flex-direction: column;
+    gap: 1px;
+    color: #c0392b;
+    cursor: not-allowed;
+    text-decoration: none;
+  }
+  .cal-cell.holiday.disabled { opacity: 0.4; }
+  .cal-holiday-name {
+    font-size: 8.5px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
 
   /* TIME SLOTS */
   .time-slots {
@@ -613,6 +652,12 @@
     <button class="lang-btn" onclick="setLang('zh')">中文</button>
   </div>
 
+  <!-- 월별 휴무안내 (시트 데이터 자동 반영) -->
+  <div id="monthlyNoticeBar" style="display:none;margin-bottom:14px;padding:14px 16px;background:#fff4e5;border:1px solid #ffd9a0;border-radius:8px;font-size:14px;line-height:1.8;color:#7a4a00;">
+    <strong style="color:#b35c00;font-size:18px;">📌 휴무 안내</strong><br>
+    <span id="monthlyNoticeText" style="font-size:14px;"></span>
+  </div>
+
   <div class="notice-bar">
     <strong data-i18n="noticeTitle">안내사항</strong><br>
     <span data-i18n="notice1">· 당일 예약은 유선으로만 가능합니다. (02-576-7736)</span><br>
@@ -831,7 +876,7 @@ const I18N = {
     privacy3:'귀하는 개인정보 수집·이용에 대한 동의를 거부하실 수 있으나, 동의 거부 시 서비스 이용이 제한됩니다.',
     privacyAgree:'개인정보 수집 및 활용에 동의합니다.',
     submitBtn:'예약 접수하기', successTitle:'예약 접수 완료',
-    successDesc:'상담 예약이 정상적으로 접수되었습니다.<br>예약 확정시 회신 문자를 보내드립니다.<br>문의 : <strong>02-516-7736 / 010-5264-7736</strong><br><br>감사합니다. <strong>지복득마루</strong>',
+    successDesc:'상담 예약이 정상적으로 접수되었습니다.<br>문의 : <strong>02-516-7736 / 010-5264-7736</strong><br><br>감사합니다. <strong>지복득마루</strong>',
   },
   en: {
     title:'Consultation Booking', heroTitle:'Consultation Booking',
@@ -990,6 +1035,7 @@ async function loadMonthlyNotice() {
       }
     }
   } catch(e) { /* 조용히 무시 */ }
+}
 
 window.closeMonthlyNotice = function() {};
 
@@ -1005,8 +1051,19 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyA2-Dp_MlixvFD
 // false = 해당 날짜 비활성 / [] = 슬롯없음
 // ─────────────────────────────────────────
 const SLOT_CONFIG = {
-  // 운영: 월~토 / 예약가능: 10:00~16:00 (30분 단위, 마지막 슬롯 15:30~16:00)
+  // 운영: 월~토 (일요일 휴무)
+  // 평일(월~금): 10:00~17:00, 30분 단위 = 14개 슬롯
   _defaultWeekday: [
+    "10:00~10:30","10:30~11:00",
+    "11:00~11:30","11:30~12:00",
+    "12:00~12:30","12:30~13:00",
+    "13:00~13:30","13:30~14:00",
+    "14:00~14:30","14:30~15:00",
+    "15:00~15:30","15:30~16:00",
+    "16:00~16:30","16:30~17:00"
+  ],
+  // 토요일: 10:00~16:00, 30분 단위 = 12개 슬롯 (평일보다 2개 적음)
+  _defaultSaturday: [
     "10:00~10:30","10:30~11:00",
     "11:00~11:30","11:30~12:00",
     "12:00~12:30","12:30~13:00",
@@ -1014,8 +1071,31 @@ const SLOT_CONFIG = {
     "14:00~14:30","14:30~15:00",
     "15:00~15:30","15:30~16:00"
   ],
-  _closedDays: [0], // 0=일요일만 휴무
+  _closedDays: [0], // 0=일요일만 휴무 (공휴일은 별도로 holidayMap에서 처리)
 };
+
+// 요일(0~6)에 맞는 기본 슬롯 목록 반환 (일요일은 빈 배열)
+function getDefaultSlotsForDow(dow) {
+  if (dow === 0) return [];
+  if (dow === 6) return SLOT_CONFIG._defaultSaturday;
+  return SLOT_CONFIG._defaultWeekday;
+}
+
+// ─────────────────────────────────────────
+// 공휴일 (구글시트 [공휴일] 시트 연동)
+// ─────────────────────────────────────────
+let holidayMap = {}; // { "2026-01-01": "신정", ... }
+
+async function loadHolidays() {
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getHolidays`);
+    const data = await res.json();
+    if (data.status === 'ok' && data.holidays) holidayMap = data.holidays;
+  } catch (e) {
+    console.warn('공휴일 정보 로드 실패:', e.message);
+    holidayMap = {};
+  }
+}
 
 // ─────────────────────────────────────────
 // STATE
@@ -1028,10 +1108,11 @@ let bookedSlots = {};
 // ─────────────────────────────────────────
 // CALENDAR
 // ─────────────────────────────────────────
-function initCalendar() {
+async function initCalendar() {
   const now = new Date();
   curYear = now.getFullYear();
   curMonth = now.getMonth();
+  await loadHolidays();
   renderCalendar();
 }
 
@@ -1080,12 +1161,19 @@ function renderCalendar() {
     const date = new Date(curYear, curMonth, d);
     const dateStr = formatDate(curYear, curMonth + 1, d);
     const dow = date.getDay();
+    const holidayName = holidayMap[dateStr];
     const el = document.createElement('div');
-    el.textContent = d;
 
     let cls = 'cal-cell';
+    if (holidayName) {
+      cls += ' holiday';
+      el.innerHTML = `${d}<span class="cal-holiday-name">${holidayName}</span>`;
+    } else {
+      el.textContent = d;
+    }
+
     if (date <= today) cls += ' disabled'; // 오늘 포함 과거 전체 비활성
-    else if (SLOT_CONFIG._closedDays.includes(dow)) cls += ' closed';
+    else if (holidayName || SLOT_CONFIG._closedDays.includes(dow)) cls += ' closed'; // 공휴일 또는 일요일은 예약 마감
     else {
       if (selectedDate === dateStr) cls += ' selected';
       el.addEventListener('click', () => selectDate(dateStr));
@@ -1100,6 +1188,13 @@ async function selectDate(dateStr) {
   selectedDate = dateStr;
   selectedTime = null;
   renderCalendar();
+
+  // ★ 공휴일이면 서버 조회 없이 바로 마감 표시
+  if (holidayMap[dateStr]) {
+    document.getElementById('timeSlotArea').innerHTML =
+      `<div class="no-date-msg">해당 날짜는 공휴일(${holidayMap[dateStr]})로 휴무입니다.</div>`;
+    return;
+  }
 
   // 로딩 표시
   document.getElementById('timeSlotArea').innerHTML = '<div class="no-date-msg">예약가능 시간 불러오는 중...</div>';
@@ -1126,9 +1221,19 @@ async function selectDate(dateStr) {
 
 function renderTimeSlots(dateStr) {
   const area = document.getElementById('timeSlotArea');
+
+  // 방어적 처리: 어떤 경로로든 공휴일 날짜가 들어오면 바로 마감 표시
+  if (holidayMap[dateStr]) {
+    area.innerHTML = `<div class="no-date-msg">해당 날짜는 공휴일(${holidayMap[dateStr]})로 휴무입니다.</div>`;
+    return;
+  }
+
+  const dm = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const dow = dm ? new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3])).getDay() : new Date(dateStr).getDay();
+
   const slots = SLOT_CONFIG[dateStr] !== undefined
     ? SLOT_CONFIG[dateStr]
-    : (SLOT_CONFIG._defaultWeekday || []);
+    : getDefaultSlotsForDow(dow); // 평일 14개 / 토요일 12개 / 일요일 0개
 
   if (!slots || slots.length === 0) {
     area.innerHTML = '<div class="no-date-msg">해당 날짜는 예약 가능한 시간이 없습니다.</div>';
@@ -1333,7 +1438,7 @@ function showSuccess(receiptNo) {
   document.getElementById('mainForm').style.display = 'none';
   const s = document.getElementById('successScreen');
   s.style.display = 'block';
-  const t = i18n[currentLang] || i18n['ko'];
+  const t = I18N[currentLang] || I18N['ko'];
   s.innerHTML = `
     <h2>${t.successTitle || '예약 접수 완료'}</h2>
     <p>${t.successDesc || '상담 예약이 정상적으로 접수되었습니다.<br>예약 확정시 회신 문자를 보내드립니다.<br>문의 : 02-576-7736 / 010-5264-7736<br><br>감사합니다. <strong>지복득마루</strong>'}</p>
