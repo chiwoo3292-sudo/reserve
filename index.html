@@ -1,1739 +1,1553 @@
-// ================================================================
-// 지복득마루 쇼룸 상담 예약 - Google Apps Script v5 (Firestore 제거, 구글시트 단독)
-// ================================================================
-
-// ================================================================
-//  ★ 스프레드시트 ID — 사내계정 이전 시 4개 파일 ID를 여기에 입력 ★
-//  이전 전: 4개 모두 기존 ID로 채워두면 기존과 100% 동일하게 동작.
-//  이전 후: 각 도메인 파일을 새로 만든 뒤 해당 ID로 교체.
-// ================================================================
-const SS_STOCK   = '1BErtYoh68Yiz5u4odV5VqGrtpa4yVdePUZeUZhs5eQw';   // ① 재고·단가 파일
-const SS_RESERVE = '153ErZIx1oaA0gjw3xHIehk1-v8745fi5-rbAILte3LQ';   // ② 고객·예약 파일 (예약접수/예약관리/쇼룸상담/연락처/다우import/월별휴무안내)
-const SS_HR      = '1LoHBLtOQHa1arIkQGXtV3Hneiq83fkvcS4lpUNTWodM';       // ③ 인사 파일 (직원정보/휴가신청/정보수정신청/결재라인)
-
-// 알리고 문자 발송(sendAligo)과 API 설정(saveAligoSettings/getAligoSettings)은
-// ERP스크립트(재고·연락처) 프로젝트 쪽에 실제로 구현되어 있음 — 여기서는 그 웹앱을 호출해서 재사용한다.
-// ★ ERP스크립트 재배포로 /exec URL이 바뀌면 이 값도 함께 교체할 것 ★
-const ERP_URL = 'https://script.google.com/macros/s/AKfycbyUOVwnhgY-njzN2zxLVFi4Gf7r1YamdZ0-7sCCWG39DLo7Wck2fl44PBAhfS0YQTju/exec';
-
-// 하위호환용(직접 참조 코드가 남아있을 경우 대비) — 이전 후엔 사용처 없음
-const SHEET_ID          = SS_RESERVE;
-const SHEET_RESERVATION = '예약접수';
-const SHEET_MANAGEMENT  = '예약관리';
-const SHEET_CONSULT     = '쇼룸상담';
-
-
-// ── POST 요청 처리 (CSV 일괄등록 등 대용량 데이터용) ──
-function doPost(e) {
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+// ── 윅스(Wix) iframe 스케일링 보정 (ERP코드.txt와 동일 로직) ──
+(function () {
   try {
-    const body = JSON.parse(e.postData.contents);
-    const action = body.action;
-    if (action === 'bulkImportConsults') return bulkImportConsults(body);
-    if (action === 'saveMemo')           return saveMemo(body);
-    return jsonResponse({ status: 'error', message: '알 수 없는 action입니다.' });
-  } catch(err) {
-    return jsonResponse({ status: 'error', message: err.message });
-  }
-}
-
-function doGet(e) {
-  const action = e.parameter.action;
-  if (action === 'submit')            return submitReservation(e.parameter);
-  if (action === 'getSlots')          return getSlots(e.parameter.date);
-  if (action === 'getReservations')   return getReservations();
-  if (action === 'updateStatus')      return updateStatus(e.parameter);
-  if (action === 'saveSlots')         return saveSlots(e.parameter);
-  if (action === 'getConsults')       return getConsults();
-  if (action === 'getConsultsFull')   return getConsultsFull();
-  if (action === 'getHolidays')       return getHolidays();
-  if (action === 'saveConsult')       return saveConsult(e.parameter);
-  if (action === 'createConsult')     return createConsult(e.parameter);
-  if (action === 'deleteConsults')    return deleteConsults(e.parameter);
-  if (action === 'bulkImportConsults') return bulkImportConsults(e.parameter);
-  if (action === 'importFromDaouSheet') return importFromDaouSheet();
-  if (action === 'login') return loginUser(e.parameter);
-  if (action === 'getNotices') return getNotices();
-  if (action === 'saveNotice') return saveNotice(e.parameter);
-  if (action === 'changePassword') return changePassword(e.parameter);
-  if (action === 'getEmployees') return getEmployees(e.parameter);
-  if (action === 'saveMyHomeTab') return saveMyHomeTab(e.parameter);
-  if (action === 'updateEmployee') return updateEmployee(e.parameter);
-  if (action === 'applyLeave')    return applyLeave(e.parameter);
-  if (action === 'getLeaves')     return getLeaves(e.parameter);
-  if (action === 'approveLeave')  return approveLeave(e.parameter);
-  if (action === 'cancelLeave')   return cancelLeave(e.parameter);
-  if (action === 'addEmployee') return addEmployee(e.parameter);
-  if (action === 'updateEmployeeInfo') return updateEmployeeInfo(e.parameter);
-  if (action === 'resetPassword') return resetPassword(e.parameter);
-  if (action === 'getMemo')              return getMemo(e.parameter);
-  if (action === 'saveMemo')             return saveMemo(e.parameter);
-  if (action === 'updateEmployeeLeave')  return updateEmployeeLeave(e.parameter);
-  if (action === 'saveSmsTemplate')   return saveSmsTemplate(e.parameter);
-  if (action === 'getSmsTemplates')   return getSmsTemplates();
-  if (action === 'logSms')            return logSms(e.parameter);
-  if (action === 'getSmsLog')         return getSmsLog();
-  if (action === 'sendTodaySms')      return sendTodaySms();
-  if (action === 'getMonthlyNotice')  return getMonthlyNotice();
-  if (action === 'saveMonthlyNotice') return saveMonthlyNotice(e.parameter);
-  if (action === 'getInfoRequests')  return getInfoRequests();
-  if (action === 'resolveInfoRequest') return resolveInfoRequest(e.parameter);
-  if (action === 'submitInfoRequest') return submitInfoRequest(e.parameter);
-  if (action === 'sendEmail')        return sendReservationEmail(e.parameter);
-  if (action === 'sendEmailFromERP') return sendEmailFromERP(e.parameter);
-  return jsonResponse({ status: 'error', message: '잘못된 요청입니다.' });
-}
-
-function normalizeDateStr(val) {
-  if (val instanceof Date) return Utilities.formatDate(val, 'Asia/Seoul', 'yyyy-MM-dd');
-  const s = String(val).trim();
-  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return Utilities.formatDate(new Date(s), 'Asia/Seoul', 'yyyy-MM-dd');
-  return s;
-}
-
-function normalizeTimeStr(val) {
-  if (!val) return '';
-  if (val instanceof Date) return Utilities.formatDate(val, 'Asia/Seoul', 'HH:mm');
-  const s = String(val).trim();
-  // "16:13:00" → "16:13"
-  if (/^\d{2}:\d{2}/.test(s)) return s.slice(0,5);
-  return s;
-}
-
-function ensureConsultSheet(ss) {
-  let sheet = ss.getSheetByName(SHEET_CONSULT);
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_CONSULT);
-    sheet.appendRow([
-      '접수일시','상담날짜','상담시간','예약자유형','방문인원',
-      '재방문여부','성함','연락처','업체명','현장주소','공간유형',
-      '평수','층수','엘리베이터','시공예정일','선호제품','전달사항','처리상태',
-      '상담자','상담내용','쪽샘플제공','명함전달','재방문여부(상담)','금액안내',
-      '시공예정시기','공사기간','기존방문검색','기존방문일','지난상담이력'
-    ]);
-  }
-  return sheet;
-}
-
-// ── 공휴일 조회 (구글시트 [공휴일] 시트: A=날짜, B=공휴일명) ──
-function getHolidays() {
-  try {
-    const cache = CacheService.getScriptCache();
-    const cached = cache.get('holidays_data');
-    if (cached) return jsonResponse(JSON.parse(cached));
-
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    const sheet = ss.getSheetByName('공휴일');
-    if (!sheet) return jsonResponse({ status: 'ok', holidays: {} });
-
-    const data = sheet.getDataRange().getValues();
-    const holidays = {};
-    for (let i = 0; i < data.length; i++) {
-      const dateVal = normalizeDateStr(data[i][0]);
-      const name = String(data[i][1] || '').trim();
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateVal)) continue; // 헤더행/빈행 등은 건너뜀
-      holidays[dateVal] = name;
-    }
-    const result = { status: 'ok', holidays };
-    cache.put('holidays_data', JSON.stringify(result), 3600); // 공휴일은 자주 안 바뀌므로 1시간 캐시
-    return jsonResponse(result);
-  } catch (err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// ── 휴무일 판정 (일요일 또는 공휴일시트에 등록된 날짜) ──
-function isClosedDate(dateStr) {
-  try {
-    if (!dateStr) return false;
-    const d = new Date(dateStr + 'T00:00:00');
-    if (isNaN(d.getTime())) return false;
-    if (d.getDay() === 0) return true; // 일요일
-
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    const sheet = ss.getSheetByName('공휴일');
-    if (!sheet) return false;
-    const data = sheet.getDataRange().getValues();
-    for (let i = 0; i < data.length; i++) {
-      if (normalizeDateStr(data[i][0]) === dateStr) return true;
-    }
-    return false;
-  } catch (err) { return false; }
-}
-
-// 1. 예약 접수 저장
-function submitReservation(p) {
-  try {
-    if (isClosedDate(p.date || '')) {
-      return jsonResponse({ status: 'error', message: '해당 날짜는 휴무일이라 예약할 수 없습니다.' });
-    }
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    const sheet = ss.getSheetByName(SHEET_RESERVATION);
-    const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyyMMdd');
-    const lastRow = sheet.getLastRow();
-    const todayRows = lastRow > 1
-      ? sheet.getRange(2, 1, lastRow - 1, 1).getValues().filter(r => String(r[0]).includes(today)).length : 0;
-    const receiptNo = `RES-${today}-${String(todayRows + 1).padStart(3, '0')}`;
-    const now = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
-    sheet.appendRow([
-      receiptNo, now, p.date||'', p.time||'', p.visitorType||'', p.visitCount||'',
-      p.revisit||'', p.name||'', p.phone||'', p.company||'',
-      p.address||'', p.size||'', p.workDate||'', p.workPeriod||'', p.memo||'', '대기'
-    ]);
-    return jsonResponse({ status: 'ok', receiptNo });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// 2. 예약 목록 조회
-function getReservations() {
-  try {
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    const sheet = ss.getSheetByName(SHEET_RESERVATION);
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return jsonResponse({ status: 'ok', rows: [] });
-    const data = sheet.getRange(2, 1, lastRow - 1, 19).getValues();
-    const rows = data.map(r => ({
-      receiptNo: r[0], submittedAt: r[1], date: normalizeDateStr(r[2]), time: r[3],
-      visitorType: r[4], visitCount: r[5], revisit: r[6],
-      name: r[7], phone: r[8], company: r[9], address: r[10],
-      size: r[11], workDate: r[12], workPeriod: r[13], memo: r[14], status: r[15],
-    }));
-    return jsonResponse({ status: 'ok', rows });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// ── 재방문 고객의 과거 상담이력을 찾아 한 줄 요약으로 생성 ──
-// (이름 일치 + 연락처가 있으면 함께 대조해 동명이인 오매칭 방지, 가장 최근 방문 기준)
-function findPastConsultSummary(sheet, name, phone) {
-  try {
-    if (!name) return '';
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return '';
-    const data = sheet.getRange(2, 1, lastRow - 1, 29).getValues();
-    let best = null;
-    for (let i = 0; i < data.length; i++) {
-      const r = data[i];
-      const rName = String(r[6] || '').trim();
-      if (rName !== name) continue;
-      const rPhone = String(r[7] || '').trim();
-      if (phone && rPhone && rPhone !== phone) continue; // 연락처 있으면 같이 대조
-      const rDate = normalizeDateStr(r[1]);
-      if (!best || rDate > best.date) {
-        best = { date: rDate, products: r[15], sampleGiven: r[20], cardGiven: r[21] };
-      }
-    }
-    if (!best) return '';
-    const m = String(best.date || '').match(/^\d{4}-(\d{2})-(\d{2})/);
-    const dateStr = m ? `${parseInt(m[1], 10)}/${parseInt(m[2], 10)}` : (best.date || '날짜미상');
-    const parts = [];
-    if (best.products) parts.push(String(best.products));
-    if (best.sampleGiven) parts.push(`쪽샘플(${best.sampleGiven})`);
-    if (best.cardGiven) parts.push(`명함 전달함(${best.cardGiven})`);
-    const body = parts.length ? parts.join(', ') : '특이사항 없음';
-    return `지난 방문(${dateStr}): ${body}`;
-  } catch (err) { return ''; }
-}
-
-// 3. 예약 상태 변경 (확정 시 쇼룸상담 자동 생성)
-function updateStatus(p) {
-  try {
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    const sheet = ss.getSheetByName(SHEET_RESERVATION);
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return jsonResponse({ status: 'error', message: '데이터 없음' });
-    const data = sheet.getRange(2, 1, lastRow - 1, 19).getValues();
-    let targetRow = -1, targetData = null;
-    for (let i = 0; i < data.length; i++) {
-      if (String(data[i][0]).trim() === String(p.receiptNo).trim()) { targetRow = i + 2; targetData = data[i]; break; }
-    }
-    if (targetRow === -1) return jsonResponse({ status: 'error', message: '접수번호를 찾을 수 없습니다.' });
-    sheet.getRange(targetRow, 16).setValue(p.status);
-    const now = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
-    if (p.status === '예약' && targetData) {
-      const cs = ensureConsultSheet(ss);
-      // 중복 체크: 같은 날짜+이름+시간으로 이미 있는지 확인
-      const cLast = cs.getLastRow();
-      let exists = false;
-      if (cLast >= 2) {
-        const existingData = cs.getRange(2, 2, cLast - 1, 3).getValues(); // B(날짜),C(시간),G(성함)→실제론 2,3,7
-        const targetDate = normalizeDateStr(targetData[2]);
-        const targetTime = String(targetData[3]||'').trim();
-        const targetName = String(targetData[7]||'').trim();
-        exists = existingData.some(function(r) {
-          return normalizeDateStr(r[0]) === targetDate && String(r[1]||'').trim() === targetTime;
-        });
-      }
-      if (!exists) {
-        const isRevisit = String(targetData[6]||'').trim() === '재방문';
-        const pastHistory = isRevisit
-          ? findPastConsultSummary(cs, String(targetData[7]||'').trim(), String(targetData[8]||'').trim())
-          : '';
-        // 예약접수 데이터 → 쇼룸상담 컬럼 순서에 맞게 매핑 (접수번호 제외)
-        cs.appendRow([
-          now,                              // A: 접수일시
-          normalizeDateStr(targetData[2]),  // B: 상담날짜
-          String(targetData[3]||''),        // C: 상담시간
-          targetData[4]||'',               // D: 예약자유형
-          targetData[5]||'',               // E: 방문인원
-          targetData[6]||'',               // F: 재방문여부
-          targetData[7]||'',               // G: 성함
-          targetData[8]||'',               // H: 연락처
-          targetData[9]||'',               // I: 업체명
-          targetData[10]||'',              // J: 현장주소
-          '',                              // K: 공간유형 (예약폼에 없음)
-          targetData[11]||'',              // L: 평수
-          '',                              // M: 층수 (예약폼에 없음)
-          '',                              // N: 엘리베이터 (예약폼에 없음)
-          targetData[12]||'',              // O: 시공예정일
-          '',                              // P: 선호제품 (예약폼에 없음)
-          targetData[14]||'',              // Q: 전달사항
-          '예약',                           // R: 처리상태
-          '','','','','','',               // S~X: 상담자~금액안내
-          '','','',''                     ,  // Y~AB: 시공예정시기~기존방문일
-          pastHistory                       // AC: 지난상담이력 (재방문일 때만 자동 채워짐)
-        ]);
-        // 예약접수 시트에서 해당 행 자동 삭제
-        sheet.deleteRow(targetRow);
-        invalidateConsultsCache();
-      }
-    }
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// ── 매주 금요일 오전 기본마감 규칙 ──
-// 10:00~10:30 / 10:30~11:00 / 11:00~11:30 / 11:30~12:00, 12:00 이후부터 정상 예약 가능
-// 관리자가 슬롯 관리 화면에서 해당 슬롯을 수동으로 "오픈"으로 저장하면 예외적으로 열림(override)
-const FRIDAY_MORNING_CLOSE_SLOTS = ['10:00~10:30', '10:30~11:00', '11:00~11:30', '11:30~12:00'];
-function isFridayDate(dateStr) {
-  try {
-    const parts = String(dateStr).split('-').map(Number);
-    if (parts.length !== 3) return false;
-    const d = new Date(parts[0], parts[1] - 1, parts[2]);
-    return d.getDay() === 5; // 금요일
-  } catch (e) { return false; }
-}
-
-// 4. 슬롯 조회
-function getSlots(date) {
-  if (!date) return jsonResponse({ status: 'error', message: 'date 필요' });
-  try {
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    const sheet = ss.getSheetByName(SHEET_MANAGEMENT);
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) {
-      let closedSlots = [];
-      if (isFridayDate(date)) closedSlots = FRIDAY_MORNING_CLOSE_SLOTS.slice();
-      return jsonResponse({ status: 'ok', date, dayClosed: false, closedSlots });
-    }
-    const rows = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
-    const dayClosedRow = rows.find(r => normalizeDateStr(r[0]) === date && String(r[1]).trim() === '' && String(r[2]).trim().toLowerCase() === 'closed');
-    if (dayClosedRow) return jsonResponse({ status: 'ok', date, dayClosed: true, closedSlots: [] });
-    const closedSlots = rows.filter(r => normalizeDateStr(r[0]) === date && String(r[2]).trim().toLowerCase() === 'closed').map(r => String(r[1]).trim());
-    // ★ 매주 금요일 오전 4개 슬롯 기본마감 — 관리자가 명시적으로 'open' 오버라이드를 저장하지 않은 경우에만 적용
-    if (isFridayDate(date)) {
-      const explicitOpen = rows.filter(r => normalizeDateStr(r[0]) === date && String(r[2]).trim().toLowerCase() === 'open').map(r => String(r[1]).trim());
-      FRIDAY_MORNING_CLOSE_SLOTS.forEach(function(slot) {
-        if (explicitOpen.indexOf(slot) === -1 && closedSlots.indexOf(slot) === -1) {
-          closedSlots.push(slot);
-        }
-      });
-    }
-    return jsonResponse({ status: 'ok', date, dayClosed: false, closedSlots });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// 5. 슬롯 저장
-function saveSlots(p) {
-  try {
-    const date = p.date || '';
-    const closedStr = p.closedSlots || '';
-    const closedSlots = closedStr ? closedStr.split(',').map(s => s.trim()).filter(Boolean) : [];
-    if (!date) return jsonResponse({ status: 'error', message: 'date 필요' });
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    const sheet = ss.getSheetByName(SHEET_MANAGEMENT);
-    const todayStr = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
-    const lastRow = sheet.getLastRow();
-    if (lastRow >= 2) {
-      const data = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-      for (let i = data.length - 1; i >= 0; i--) {
-        const rowDate = normalizeDateStr(data[i][0]);
-        if (rowDate < todayStr || rowDate === date) sheet.deleteRow(i + 2);
-      }
-    }
-    closedSlots.forEach(slot => {
-      const newRow = sheet.getLastRow() + 1;
-      sheet.getRange(newRow, 1).setNumberFormat('@');
-      sheet.appendRow([date, slot, 'closed']);
-    });
-    // ★ 금요일 오전 기본마감 슬롯인데 관리자가 이번엔 오픈 상태로 저장했다면, 명시적 오버라이드 기록
-    //   (기록이 없으면 다음 조회 때 기본마감 규칙이 다시 적용되어 자동으로 마감돼버림)
-    if (isFridayDate(date)) {
-      FRIDAY_MORNING_CLOSE_SLOTS.forEach(function(slot) {
-        if (closedSlots.indexOf(slot) === -1) {
-          const newRow = sheet.getLastRow() + 1;
-          sheet.getRange(newRow, 1).setNumberFormat('@');
-          sheet.appendRow([date, slot, 'open']);
-        }
-      });
-    }
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// 쇼룸상담 시트 한 행 → 응답 객체 변환 (공용)
-function consultRowToObj(r, rowIndex) {
-  return {
-    _rowIndex: rowIndex, // 행 번호 (삭제/수정용)
-    submittedAt: r[0], date: normalizeDateStr(r[1]), time: normalizeTimeStr(r[2]),
-    visitorType: r[3], visitCount: r[4], revisit: r[5],
-    name: r[6], phone: r[7], company: r[8], address: r[9],
-    spaceType: r[10], size: r[11], floor: r[12], elevator: r[13],
-    workDate: r[14], products: r[15], memo: r[16], status: r[17],
-    counselor: r[18], content: r[19], sampleGiven: r[20],
-    cardGiven: r[21], revisitConsult: r[22], priceInfo: r[23],
-    workTiming: r[24], workPeriod: r[25], reqQuote: r[26], oldVisitDate: r[27],
-    pastHistory: r[28],
-  };
-}
-
-// 쇼룸상담 캐시 일괄 무효화 (수정/삭제/추가 발생 시 호출)
-function invalidateConsultsCache() {
-  const cache = CacheService.getScriptCache();
-  cache.remove('consults_recent100');
-  cache.remove('consults_full');
-}
-
-// 6. 쇼룸상담 목록 조회 — ★ 성능 개선: 기본은 최근 100건만 반환 (전체 2000여건을 매번 다 보내지 않음)
-//    ★ "최근 100건"의 기준 = 오늘 날짜 기준 "가까운 미래 → 가까운 과거" 순서로 100건.
-//    (시트에 등록된 순서와는 무관 — 예: 오늘이 7/1이면 7/8 예약건부터 시작해서 6월 상담완료건까지)
-//    데이터가 이 기준으로 필요할 때 이 액션 사용. 전체가 필요하면 getConsultsFull 사용.
-function getConsults() {
-  try {
-    const cache = CacheService.getScriptCache();
-    const cached = cache.get('consults_recent100');
-    if (cached) return jsonResponse(JSON.parse(cached));
-
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    const sheet = ensureConsultSheet(ss);
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) {
-      const empty = { status: 'ok', rows: [], total: 0 };
-      cache.put('consults_recent100', JSON.stringify(empty), 60);
-      return jsonResponse(empty);
-    }
-    const totalCount = lastRow - 1;
-    const todayStr = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
-
-    // 1) 날짜(B열)만 저비용으로 전체 조회 (28컬럼 전체가 아니라 1컬럼이라 가벼움)
-    const dateCol = sheet.getRange(2, 2, totalCount, 1).getValues();
-    const ranked = dateCol.map(function(row, i) {
-      return { rowIndex: i + 2, date: normalizeDateStr(row[0]) };
-    });
-
-    // 2) "오늘과 가까운 순" 정렬: 미래는 항상 과거보다 먼저, 미래끼리는 가까운 미래 먼저, 과거끼리는 가까운 과거 먼저
-    ranked.sort(function(a, b) {
-      const aFuture = a.date >= todayStr;
-      const bFuture = b.date >= todayStr;
-      if (aFuture !== bFuture) return aFuture ? -1 : 1;
-      return aFuture ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date);
-    });
-
-    const fetchCount = Math.min(100, totalCount);
-    const pickedIndices = ranked.slice(0, fetchCount).map(function(x) { return x.rowIndex; }).sort(function(a, b) { return a - b; });
-
-    // 3) 뽑힌 행들만 28컬럼 전체 데이터 조회 (연속된 행은 묶어서 조회 → API 호출 최소화)
-    const fetched = fetchRowsByIndices(sheet, pickedIndices, 29);
-    let rows = fetched.map(function(o) { return consultRowToObj(o.r, o.idx); });
-
-    // 4) 최종적으로 "가까운 미래 → 가까운 과거" 순으로 재정렬해서 반환
-    rows.sort(function(a, b) {
-      const aFuture = (a.date || '') >= todayStr;
-      const bFuture = (b.date || '') >= todayStr;
-      if (aFuture !== bFuture) return aFuture ? -1 : 1;
-      const da = (a.date || '') + ' ' + (a.time || '');
-      const db = (b.date || '') + ' ' + (b.time || '');
-      return aFuture ? da.localeCompare(db) : db.localeCompare(da);
-    });
-
-    const result = { status: 'ok', rows: rows, total: totalCount };
-    try { cache.put('consults_recent100', JSON.stringify(result), 60); } catch(_) {} // 100건이면 100KB 이내라 캐시 정상 동작할 것
-    return jsonResponse(result);
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// 지정한 행 번호들만 골라서 데이터 조회 (연속된 행은 하나의 getRange로 묶어 호출 횟수를 최소화)
-function fetchRowsByIndices(sheet, indices, numCols) {
-  const result = [];
-  let i = 0;
-  while (i < indices.length) {
-    const start = indices[i];
-    let end = start;
-    let j = i + 1;
-    while (j < indices.length && indices[j] === end + 1) {
-      end = indices[j];
-      j++;
-    }
-    const count = end - start + 1;
-    const values = sheet.getRange(start, 1, count, numCols).getValues();
-    for (let k = 0; k < count; k++) {
-      result.push({ r: values[k], idx: start + k });
-    }
-    i = j;
-  }
-  return result;
-}
-
-
-// 6-2. 쇼룸상담 전체 목록 조회 (전체검색용 — 프론트에서 텍스트 검색할 때만 호출)
-function getConsultsFull() {
-  try {
-    const cache = CacheService.getScriptCache();
-    const cached = cache.get('consults_full');
-    if (cached) return jsonResponse(JSON.parse(cached));
-
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    const sheet = ensureConsultSheet(ss);
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return jsonResponse({ status: 'ok', rows: [] });
-
-    const data = sheet.getRange(2, 1, lastRow - 1, 29).getValues();
-    const rows = data.map((r, i) => consultRowToObj(r, i + 2));
-    rows.sort((a, b) => {
-      const da = (a.date || '') + ' ' + (a.time || '');
-      const db = (b.date || '') + ' ' + (b.time || '');
-      return db.localeCompare(da);
-    });
-    const result = { status: 'ok', rows };
-    // 전체 데이터는 100KB를 넘을 가능성이 높음 — 캐시 저장 실패해도 결과는 정상 반환
-    try { cache.put('consults_full', JSON.stringify(result), 60); } catch(_) {}
-    return jsonResponse(result);
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// 7. 쇼룸상담 기록 저장 (수정)
-function saveConsult(p) {
-  try {
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    const sheet = ensureConsultSheet(ss);
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return jsonResponse({ status: 'error', message: '데이터 없음' });
-    const targetRow = parseInt(p.rowIndex, 10);
-    if (!targetRow || targetRow < 2) return jsonResponse({ status: 'error', message: '행 번호가 올바르지 않습니다.' });
-    sheet.getRange(targetRow, 2).setValue(p.date || '');
-    sheet.getRange(targetRow, 3).setValue(p.time || '');
-    sheet.getRange(targetRow, 4).setValue(p.visitorType || '');
-    sheet.getRange(targetRow, 5).setValue(p.visitCount || '');
-    sheet.getRange(targetRow, 6).setValue(p.visitStatus || '');
-    sheet.getRange(targetRow, 7).setValue(p.name || '');
-    sheet.getRange(targetRow, 8).setValue(p.phone || '');
-    sheet.getRange(targetRow, 9).setValue(p.company || '');
-    sheet.getRange(targetRow, 10).setValue(p.address || '');
-    sheet.getRange(targetRow, 11).setValue(p.spaceType || '');
-    sheet.getRange(targetRow, 12).setValue(p.size || '');
-    sheet.getRange(targetRow, 14).setValue(p.elevator || '');
-    sheet.getRange(targetRow, 15).setNumberFormat('@').setValue(p.workDate || '');  // O: 시공예정일
-    sheet.getRange(targetRow, 16).setValue(p.products || '');
-    sheet.getRange(targetRow, 17).setValue(p.content || '');  // Q: 전달사항
-    sheet.getRange(targetRow, 19, 1, 6).setValues([[
-      p.counselor||'', p.counselorContent||'', p.reqSample||'', p.reqCard||'', p.reqRevisit||'', p.priceInfo||''
-    ]]);
-    sheet.getRange(targetRow, 25).setValue(p.workTiming || '');  // Y: 시공예정시기
-    sheet.getRange(targetRow, 26).setValue(p.workPeriod || '');  // Z: 공사기간
-    sheet.getRange(targetRow, 27).setValue(p.reqQuote || '');    // AA: 견적서요청
-    if (p.pastHistory !== undefined) sheet.getRange(targetRow, 29).setValue(p.pastHistory || ''); // AC: 지난상담이력
-    invalidateConsultsCache();
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// 8. 쇼룸상담 신규 수기등록
-function createConsult(p) {
-  try {
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    const sheet = ensureConsultSheet(ss);
-    const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyyMMdd');
-    const lastRow = sheet.getLastRow();
-    const todayRows = lastRow > 1
-      ? sheet.getRange(2, 1, lastRow - 1, 1).getValues().filter(r => String(r[0]).includes(today)).length : 0;
-    const now = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
-    sheet.appendRow([
-      now, p.date||'', p.time||'', p.visitorType||'', p.visitCount||'',
-      p.visitStatus||'', p.name||'', p.phone||'', p.company||'',
-      p.address||'', p.spaceType||'', p.size||'', '', p.elevator||'',
-      p.workDate||'', p.products||'', p.content||'', p.statusField||'예약',
-      p.counselor||'', p.counselorContent||'', p.reqSample||'', p.reqCard||'',
-      p.reqRevisit||'', p.priceInfo||'', '', '', '', '', p.pastHistory||''
-    ]);
-    invalidateConsultsCache();
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// 9. 쇼룸상담 삭제 (체크된 항목)
-function deleteConsults(p) {
-  try {
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    const sheet = ensureConsultSheet(ss);
-    const rowIndexes = (p.rowIndexes || '').split(',').map(s => parseInt(s.trim(),10)).filter(Boolean).sort((a,b)=>b-a);
-    if (!rowIndexes.length) return jsonResponse({ status: 'error', message: '삭제할 항목이 없습니다.' });
-    let deleted = 0;
-    rowIndexes.forEach(function(rowIdx) {
-      if (rowIdx >= 2) { sheet.deleteRow(rowIdx); deleted++; }
-    });
-    invalidateConsultsCache();
-    return jsonResponse({ status: 'ok', deleted });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-
-// 11. 다우import 시트 → 쇼룸상담 변환 (헤더명 기반 매핑)
-function importFromDaouSheet() {
-  try {
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    const srcSheet = ss.getSheetByName('다우import');
-    if (!srcSheet) return jsonResponse({ status: 'error', message: '[다우import] 시트를 찾을 수 없습니다.' });
-
-    const lastRow = srcSheet.getLastRow();
-    if (lastRow < 2) return jsonResponse({ status: 'error', message: '데이터가 없습니다.' });
-
-    // 헤더명으로 컬럼 인덱스 찾기
-    const lastCol = srcSheet.getLastColumn();
-    const headers = srcSheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h){ return String(h).trim(); });
-
-    function col(name) {
-      var idx = headers.indexOf(name);
-      return idx; // -1이면 없는 컬럼
-    }
-
-    const data = srcSheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
-    const consultSheet = ensureConsultSheet(ss);
-    const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyyMMdd');
-    const now   = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
-
-    // 기존 데이터 전체 삭제 (헤더 1행 제외) - 한번에 처리
-    const cLast = consultSheet.getLastRow();
-    if (cLast >= 2) {
-      consultSheet.getRange(2, 1, cLast - 1, consultSheet.getLastColumn()).clearContent();
-    }
-
-    // 셀 값 가져오기 (없는 컬럼이면 빈문자열, Date 객체 처리)
-    function get(row, name) {
-      var i = col(name);
-      if (i < 0) return '';
-      var v = row[i];
-      if (v instanceof Date) {
-        if (isNaN(v.getTime())) return '';
-        return Utilities.formatDate(v, 'Asia/Seoul', 'yyyy-MM-dd');
-      }
-      return String(v||'').trim();
-    }
-
-    // 날짜 전용 get (시간 포함 데이터도 날짜만 추출)
-    function getDate(row, name) {
-      var i = col(name);
-      if (i < 0) return '';
-      var v = row[i];
-      if (v instanceof Date) {
-        if (isNaN(v.getTime())) return '';
-        return Utilities.formatDate(v, 'Asia/Seoul', 'yyyy-MM-dd');
-      }
-      var s = String(v||'').trim();
-      return s.length >= 10 ? s.slice(0,10) : s;
-    }
-
-    // 여러 컬럼 합치기: 값 있는 것들 콤마로 합침
-    function merge() {
-      var names = Array.prototype.slice.call(arguments);
-      return names.map(function(n){ return get(data[0], n); }); // 실제론 row 전달
-    }
-
-    function mergeRow(row) {
-      var names = Array.prototype.slice.call(arguments, 1);
-      var vals = [];
-      names.forEach(function(n) {
-        var v = get(row, n);
-        if (v && v !== '선택안함' && vals.indexOf(v) === -1) vals.push(v);
-      });
-      return vals.join(', ');
-    }
-
-    // 날짜/시간 분리
-    function extractDateTime(v) {
-      if (!v) return { date:'', time:'' };
-      if (v instanceof Date && !isNaN(v.getTime())) {
-        return {
-          date: Utilities.formatDate(v, 'Asia/Seoul', 'yyyy-MM-dd'),
-          time: Utilities.formatDate(v, 'Asia/Seoul', 'HH:mm'),
-        };
-      }
-      var s = String(v).trim();
-      var parts = s.split(' ');
-      return { date: parts[0]||'', time: parts[1] ? parts[1].slice(0,5) : '' };
-    }
-
-    // 날짜만 추출
-    function extractDate(v) {
-      if (!v) return '';
-      if (v instanceof Date && !isNaN(v.getTime())) {
-        return Utilities.formatDate(v, 'Asia/Seoul', 'yyyy-MM-dd');
-      }
-      var s = String(v).trim();
-      return s.length >= 10 ? s.slice(0,10) : s;
-    }
-
-    // 상담자 이메일 제거
-    function cleanCounselor(v) {
-      return String(v||'').split(',')
-        .map(function(s){ return s.replace(/[(（][^)）]*[)）]/g,'').replace(/\s+/g,' ').trim(); })
-        .filter(Boolean).join(', ');
-    }
-
-    // 연락처 정리
-    function cleanPhone(v) {
-      return String(v||'').trim().replace(/\s+/g,'-');
-    }
-
-    // 요청사항 파싱: 요청사항 + 요청사항2를 모두 읽음
-    function parseReq(row) {
-      var combined = mergeRow(row, '요청사항', '요청사항2').toLowerCase().replace(/ /g,' ');
-      return {
-        sample:  combined.indexOf('샘플')  !== -1,
-        card:    combined.indexOf('명함')  !== -1,
-        revisit: combined.indexOf('재방문') !== -1,
-      };
-    }
-
-    var newRows = [];
-    var seq = 0;
-
-    data.forEach(function(row) {
-      var rawName = get(row, '성함');
-      if (!rawName) return;
-
-      var counselor   = cleanCounselor(get(row, '상담자'));
-      var dt          = extractDateTime(row[col('일정')]);
-
-      // 연락처: 첫번째 우선, 없으면 두번째
-      var phone1 = cleanPhone(get(row, '연락처'));
-      var phone2 = cleanPhone(get(row, '연락처2') || (col('연락처2') >= 0 ? '' : ''));
-      // Y열(두번째 연락처) 직접 접근
-      var colPhone2 = headers.lastIndexOf('연락처');
-      var phone2Raw = colPhone2 > headers.indexOf('연락처') ? cleanPhone(String(row[colPhone2]||'').trim()) : '';
-      var phone = phone1 || phone2Raw;
-
-      // 업체명: 첫번째 우선, 없으면 두번째
-      var colCompany2 = headers.lastIndexOf('업체명');
-      var company1 = get(row, '업체명');
-      var company2 = colCompany2 > headers.indexOf('업체명') ? String(row[colCompany2]||'').trim() : '';
-      var company = company1 || company2;
-
-      var revisit     = get(row, '방문 여부');
-      var rawStatus   = get(row, '상태').trim();
-      // 다우 상태값 → 우리 상태값 매핑
-      var statusMap = {'상담 완료':'상담완료','샘플 수령':'샘플수령','미방문':'미방문','전화 상담':'전화상담','예약':'예약'};
-      var status = statusMap[rawStatus] || rawStatus.replace(/\s/g,'') || '예약';
-      var visitorType = get(row, '유형');
-      var visitCount  = get(row, '방문 인원');
-
-      // 중복 컬럼 합치기
-      var address   = mergeRow(row, '현장주소', '현장주소2', '현장주소3');
-      var size      = mergeRow(row, '평형', '평형2', '평형3');
-      var spaceType = mergeRow(row, '공간유형', '공간유형2', '공간유형3');
-      // 시공예정일: 중복 컬럼 날짜만 추출해서 합치기
-      var workDateVals = ['시공예정일','시공예정일2','시공예정일3'].map(function(n){
-        return getDate(row, n);
-      }).filter(function(v){ return v && v !== '선택안함'; });
-      // 중복 제거
-      var workDate = workDateVals.filter(function(v,i,a){ return a.indexOf(v)===i; }).join(', ');
-      var elevator  = mergeRow(row, '엘리베이터', '엘리베이터2');
-      var products  = mergeRow(row, '관심제품', '관심제품2');
-      var workTiming = mergeRow(row, '시공예정시기', '시공예정시기2');
-      var workPeriod = get(row, '공사기간');
-      var priceInfo  = get(row, '단가안내');
-
-      // 샘플/명함
-      var req         = parseReq(row);
-      var sampleGiven = req.sample ? get(row, '샘플제공목록') : '';
-      var cardGiven   = req.card   ? get(row, '명함') : '';
-      var revisitConsult = req.revisit ? '재방문예정' : '';
-
-      // 전달사항 합치기: 전달사항 + 전달사항2를 모두 Q열 전달사항으로 저장
-      var memo = mergeRow(row, '전달사항', '전달사항2');
-
-      // 기존방문
-      var oldVisitSearch = get(row, '기존방문검색');
-      var oldVisitDate   = get(row, '기존방문일');
-
-      seq++;
-      var receiptNo = 'IMP-' + today + '-' + String(seq).padStart(4,'0');
-
-      newRows.push([
-        now,                      // A: 접수일시
-        dt.date, dt.time,         // B: 상담날짜, C: 상담시간
-        visitorType, visitCount,  // D: 예약자유형, E: 방문인원
-        revisit, rawName,         // F: 재방문여부, G: 성함
-        phone, company,           // H: 연락처, I: 업체명
-        address, spaceType,       // J: 현장주소, K: 공간유형
-        size, '',                 // L: 평수, M: 층수
-        elevator, workDate,       // N: 엘리베이터, O: 시공예정일
-        products, memo,           // P: 선호제품, Q: 전달사항
-        status,                   // R: 처리상태
-        counselor, '',            // S: 상담자, T: 상담내용
-        sampleGiven, cardGiven,   // U: 쪽샘플제공, V: 명함전달
-        revisitConsult, priceInfo,// W: 재방문여부(상담), X: 금액안내
-        workTiming, workPeriod,   // Y: 시공예정시기, Z: 공사기간
-        oldVisitSearch, oldVisitDate // AA: 기존방문검색, AB: 기존방문일
-      ]);
-    });
-
-    if (newRows.length === 0) return jsonResponse({ status: 'ok', count: 0 });
-
-    // 한 번에 일괄 저장
-    const insertRow = consultSheet.getLastRow() + 1;
-    const range = consultSheet.getRange(insertRow, 1, newRows.length, newRows[0].length);
-
-    // C열(상담날짜), D열(상담시간) 텍스트 서식 강제
-    consultSheet.getRange(insertRow, 3, newRows.length, 2).setNumberFormat('@');
-
-    range.setValues(newRows);
-
-    invalidateConsultsCache();
-    return jsonResponse({ status: 'ok', count: newRows.length });
-  } catch(err) {
-    return jsonResponse({ status: 'error', message: err.message });
-  }
-}
-
-
-
-// ── 비밀번호 해시 (간단한 사내용) ──
-function hashPassword(pw) {
-  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, pw + 'jibokdeuk_salt_2024');
-  return bytes.map(function(b){ return (b < 0 ? b + 256 : b).toString(16).padStart(2,'0'); }).join('');
-}
-
-// ── 로그인 ──
-function loginUser(p) {
-  try {
-    const ss = SpreadsheetApp.openById(SS_HR);
-    const sheet = ss.getSheetByName('직원정보');
-    if (!sheet) return jsonResponse({ status: 'error', message: '직원정보 시트 없음' });
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return jsonResponse({ status: 'error', message: '등록된 직원 없음' });
-    const data = sheet.getRange(2, 1, lastRow - 1, 19).getValues();
-    const inputHash = hashPassword(p.password || '');
-    for (let i = 0; i < data.length; i++) {
-      const r = data[i];
-      if (String(r[0]).trim() === String(p.id).trim() && String(r[9]).trim() === inputHash) {
-        return jsonResponse({
-          status: 'ok',
-          user: {
-            id:          r[0],
-            name:        r[1],
-            dept:        r[2],
-            title:       r[3],
-            joinDate:    r[4] instanceof Date ? Utilities.formatDate(r[4],'Asia/Seoul','yyyy-MM-dd') : String(r[4]||''),
-            leaveDate:   r[5] instanceof Date ? Utilities.formatDate(r[5],'Asia/Seoul','yyyy-MM-dd') : String(r[5]||''),
-            annualLeave: r[6],
-            phone:       r[7],
-            email:       r[8],
-            allowedTabs: r[10],
-            role:        r[11],
-            isManager:   r[12] === true || r[12] === 'TRUE' || r[12] === '부서장',
-            isHead:      r[13] === true || r[13] === 'TRUE' || r[13] === '대표',
-            usedLeave:   Number(r[14]) || 0,
-            approverIds: String(r[15] || ''),
-            birthday:    r[16] instanceof Date ? Utilities.formatDate(r[16],'Asia/Seoul','yyyy-MM-dd') : String(r[16]||''),
-            cardUrl:     String(r[17] || ''),
-            homeTab:     String(r[18] || ''),
-          }
-        });
-      }
-    }
-    return jsonResponse({ status: 'error', message: '아이디 또는 비밀번호가 올바르지 않습니다.' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// ── 비밀번호 변경 ──
-function changePassword(p) {
-  try {
-    const ss = SpreadsheetApp.openById(SS_HR);
-    const sheet = ss.getSheetByName('직원정보');
-    if (!sheet) return jsonResponse({ status: 'error', message: '직원정보 시트 없음' });
-    const lastRow = sheet.getLastRow();
-    const data = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
-    const currentHash = hashPassword(p.currentPassword || '');
-    const newHash = hashPassword(p.newPassword || '');
-    for (let i = 0; i < data.length; i++) {
-      if (String(data[i][0]).trim() === String(p.id).trim() && String(data[i][9]).trim() === currentHash) {
-        sheet.getRange(i + 2, 10).setValue(newHash);
-        return jsonResponse({ status: 'ok' });
-      }
-    }
-    return jsonResponse({ status: 'error', message: '현재 비밀번호가 올바르지 않습니다.' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// ── 직원 목록 조회 (관리자용) ──
-// 개인 홈 화면 설정 저장 (본인 아이디로 S열에 저장, 별도 권한 불필요)
-function saveMyHomeTab(p) {
-  try {
-    const ss = SpreadsheetApp.openById(SS_HR);
-    const sheet = ss.getSheetByName('직원정보');
-    if (!sheet) return jsonResponse({ status: 'error', message: '직원정보 시트 없음' });
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return jsonResponse({ status: 'error', message: '등록된 직원 없음' });
-    const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-    let targetRow = -1;
-    for (let i = 0; i < ids.length; i++) {
-      if (String(ids[i][0]).trim() === String(p.id).trim()) { targetRow = i + 2; break; }
-    }
-    if (targetRow === -1) return jsonResponse({ status: 'error', message: '해당 아이디를 찾을 수 없습니다.' });
-    sheet.getRange(targetRow, 19).setValue(p.homeTab || ''); // S열: 개인 홈 화면 설정
-    try { CacheService.getScriptCache().remove('employees_data'); } catch (e) {}
-    return jsonResponse({ status: 'ok' });
-  } catch (err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-function getEmployees(p) {
-  try {
-    const cache = CacheService.getScriptCache();
-    // nocache 파라미터 있으면 캐시 무시
-    const skipCache = p && p.nocache;
-    if (!skipCache) {
-      const cached = cache.get('employees_data');
-      if (cached) return jsonResponse(JSON.parse(cached));
-    }
-
-    const ss = SpreadsheetApp.openById(SS_HR);
-    const sheet = ss.getSheetByName('직원정보');
-    if (!sheet) return jsonResponse({ status: 'ok', rows: [] });
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return jsonResponse({ status: 'ok', rows: [] });
-    const data = sheet.getRange(2, 1, lastRow - 1, 19).getValues();
-    const rows = data.map(r => ({
-      id:          r[0],
-      name:        r[1],
-      dept:        r[2],
-      title:       r[3],
-      joinDate:    r[4] instanceof Date ? Utilities.formatDate(r[4],'Asia/Seoul','yyyy-MM-dd') : String(r[4]||''),
-      leaveDate:   r[5] instanceof Date ? Utilities.formatDate(r[5],'Asia/Seoul','yyyy-MM-dd') : String(r[5]||''),
-      annualLeave: r[6],
-      phone:       r[7],
-      email:       r[8],
-      allowedTabs: r[10],
-      role:        r[11],
-      isManager:   r[12] === true || r[12] === 'TRUE' || r[12] === '부서장', // M: 부서장 여부
-      isHead:      r[13] === true || r[13] === 'TRUE' || r[13] === '대표',   // N: 대표 여부
-      usedLeave:   Number(r[14]) || 0,   // O: 기사용 연차 (수동 입력)
-      approverIds: String(r[15] || ''),  // P: 결재라인 (부서장ID,대표ID)
-      birthday:    r[16] instanceof Date ? Utilities.formatDate(r[16],'Asia/Seoul','yyyy-MM-dd') : String(r[16]||''), // Q: 생일
-      cardUrl:     String(r[17] || ''),  // R: 명함 이미지 URL
-      homeTab:     String(r[18] || ''),  // S: 개인 홈 화면 설정
-    }));
-    const result = { status: 'ok', rows };
-    cache.put('employees_data', JSON.stringify(result), 300);
-    return jsonResponse(result);
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// ── 직원 허용탭/권한 업데이트 ──
-function updateEmployee(p) {
-  try {
-    CacheService.getScriptCache().remove('employees_data'); // 캐시 무효화
-    const ss = SpreadsheetApp.openById(SS_HR);
-    const sheet = ss.getSheetByName('직원정보');
-    if (!sheet) return jsonResponse({ status: 'error', message: '직원정보 시트 없음' });
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return jsonResponse({ status: 'error', message: '데이터 없음' });
-    const data = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-    let targetRow = -1;
-    for (let i = 0; i < data.length; i++) {
-      if (String(data[i][0]).trim() === String(p.id).trim()) {
-        targetRow = i + 2; break;
-      }
-    }
-    if (targetRow === -1) return jsonResponse({ status: 'error', message: '직원을 찾을 수 없습니다: ' + p.id });
-    if (p.allowedTabs !== undefined && p.allowedTabs !== null) sheet.getRange(targetRow, 11).setValue(p.allowedTabs);
-    if (p.role !== undefined && p.role !== null) sheet.getRange(targetRow, 12).setValue(p.role);
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// ── 직원 추가 ──
-function addEmployee(p) {
-  try {
-    CacheService.getScriptCache().remove('employees_data'); // 캐시 무효화
-    const ss = SpreadsheetApp.openById(SS_HR);
-    const sheet = ss.getSheetByName('직원정보');
-    if (!sheet) return jsonResponse({ status: 'error', message: '직원정보 시트 없음' });
-    // 아이디 중복 체크
-    const lastRow = sheet.getLastRow();
-    if (lastRow >= 2) {
-      const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-      for (let i = 0; i < ids.length; i++) {
-        if (String(ids[i][0]).trim().toLowerCase() === String(p.id).trim().toLowerCase()) {
-          return jsonResponse({ status: 'error', message: '이미 사용 중인 아이디입니다.' });
+    if (window.self === window.top) return;
+    var realWidth = (window.screen && window.screen.width) ? window.screen.width : 0;
+    if (!realWidth || realWidth > 900) return;
+    var check = function () {
+      var renderedWidth = document.documentElement.clientWidth;
+      if (renderedWidth > realWidth * 1.25) {
+        var meta = document.querySelector('meta[name="viewport"]');
+        if (meta) {
+          meta.setAttribute('content', 'width=' + realWidth + ', initial-scale=1.0');
         }
       }
-    }
-    // 비밀번호 해시 (0000 기본값) - 기존 loginUser와 동일한 방식
-    const defaultPw = '0000';
-    const hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,
-      defaultPw, Utilities.Charset.UTF_8)
-      .map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join('');
-    const now = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
-    // 컬럼: id, name, dept, title, joinDate, leaveDate, annualLeave, phone, email, pw_hash, allowedTabs, role
-    sheet.appendRow([
-      p.id.trim().toLowerCase(),
-      p.name || '',
-      p.dept || '',
-      p.title || '',
-      p.joinDate || now,
-      '', '', p.phone || '', p.email || '',
-      hash,
-      'ALL',
-      'staff'
-    ]);
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// ── 직원 기본정보 수정 (이름/부서/직급/입사일/이메일/연차) ──
-function updateEmployeeInfo(p) {
-  try {
-    CacheService.getScriptCache().remove('employees_data');
-    const ss = SpreadsheetApp.openById(SS_HR);
-    const sheet = ss.getSheetByName('직원정보');
-    if (!sheet) return jsonResponse({ status: 'error', message: '직원정보 시트 없음' });
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return jsonResponse({ status: 'error', message: '데이터 없음' });
-    const data = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-    let targetRow = -1;
-    for (let i = 0; i < data.length; i++) {
-      if (String(data[i][0]).trim() === String(p.id).trim()) {
-        targetRow = i + 2; break;
-      }
-    }
-    if (targetRow === -1) return jsonResponse({ status: 'error', message: '직원을 찾을 수 없습니다.' });
-    // A=id, B=name, C=dept, D=title, E=joinDate, F=leaveDate, G=annualLeave, H=phone, I=email, M=isManager, N=isHead, O=usedLeave, P=approverIds
-    if (p.name)         sheet.getRange(targetRow, 2).setValue(p.name);
-    if (p.dept)         sheet.getRange(targetRow, 3).setValue(p.dept);
-    if (p.title)        sheet.getRange(targetRow, 4).setValue(p.title);
-    if (p.joinDate)     sheet.getRange(targetRow, 5).setValue(p.joinDate);
-    if (p.annualLeave !== undefined && p.annualLeave !== '') sheet.getRange(targetRow, 7).setValue(Number(p.annualLeave)||0);
-    if (p.phone !== undefined) sheet.getRange(targetRow, 8).setValue(p.phone);
-    if (p.email !== undefined) sheet.getRange(targetRow, 9).setValue(p.email);
-    if (p.isManager !== undefined) sheet.getRange(targetRow, 13).setValue(p.isManager === 'true' || p.isManager === true);
-    if (p.isHead !== undefined)    sheet.getRange(targetRow, 14).setValue(p.isHead === 'true' || p.isHead === true);
-    if (p.usedLeave !== undefined && p.usedLeave !== '') sheet.getRange(targetRow, 15).setValue(Number(p.usedLeave)||0);
-    if (p.approverIds !== undefined) sheet.getRange(targetRow, 16).setValue(p.approverIds);
-    if (p.birthday !== undefined && p.birthday !== '') sheet.getRange(targetRow, 17).setValue(p.birthday);
-    if (p.cardUrl !== undefined) sheet.getRange(targetRow, 18).setValue(p.cardUrl);
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// ── 비밀번호 초기화 (0000) ──
-function resetPassword(p) {
-  try {
-    const ss = SpreadsheetApp.openById(SS_HR);
-    const sheet = ss.getSheetByName('직원정보');
-    if (!sheet) return jsonResponse({ status: 'error', message: '직원정보 시트 없음' });
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return jsonResponse({ status: 'error', message: '데이터 없음' });
-    const data = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-    let targetRow = -1;
-    for (let i = 0; i < data.length; i++) {
-      if (String(data[i][0]).trim() === String(p.id).trim()) {
-        targetRow = i + 2; break;
-      }
-    }
-    if (targetRow === -1) return jsonResponse({ status: 'error', message: '직원을 찾을 수 없습니다.' });
-    const hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,
-      '0000', Utilities.Charset.UTF_8)
-      .map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join('');
-    sheet.getRange(targetRow, 10).setValue(hash); // J열 = pw_hash
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-
-// ================================================================
-// 휴가 신청 / 결재 / 연차 관리
-// ================================================================
-
-// ── 연차 부여일수 계산 (근로기준법) ──
-function calcAnnualLeave(joinDateStr) {
-  if (!joinDateStr) return 0;
-  const join = new Date(joinDateStr);
-  const today = new Date();
-  const diffMs = today - join;
-  const diffMonths = diffMs / (1000 * 60 * 60 * 24 * 30.44);
-  const diffYears = diffMs / (1000 * 60 * 60 * 24 * 365.25);
-  if (diffYears < 1) {
-    // 1년 미만: 매월 1일, 최대 11일
-    return Math.min(Math.floor(diffMonths), 11);
-  } else {
-    // 1년 이상: 15일 + 2년마다 1일 추가, 최대 25일
-    const extra = Math.floor((diffYears - 1) / 2);
-    return Math.min(15 + extra, 25);
-  }
-}
-
-// ── 휴가 신청 ──
-function applyLeave(p) {
-  try {
-    CacheService.getScriptCache().remove('employees_data');
-    const ss = SpreadsheetApp.openById(SS_HR);
-    let sheet = ss.getSheetByName('휴가신청');
-    if (!sheet) {
-      sheet = ss.insertSheet('휴가신청');
-      sheet.appendRow(['신청ID','신청자ID','신청자명','부서','신청일시','휴가시작','휴가종료','총일수','종류','사유','상태','부서장승인','대표승인','결재라인']);
-      sheet.setFrozenRows(1);
-    }
-    const now = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
-    const applyId = 'LV' + new Date().getTime();
-    const days = parseFloat(p.days) || 0;
-    // 대표가 신청하면 바로 확정
-    const isHead = p.isHead === 'true' || p.isHead === true;
-    const status = isHead ? '확정' : '대기';
-    const headApproval = isHead ? '자동승인(' + now + ')' : '';
-    sheet.appendRow([
-      applyId, p.id, p.name, p.dept, now,
-      String(p.startDate||''), String(p.endDate||''), days, p.leaveType || '연차',
-      p.reason || '', status, isHead ? '자동승인' : '', headApproval, p.approverIds || ''
-    ]);
-    return jsonResponse({ status: 'ok', applyId });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// ── 휴가 신청 목록 조회 ──
-function getLeaves(p) {
-  try {
-    const ss = SpreadsheetApp.openById(SS_HR);
-    const sheet = ss.getSheetByName('휴가신청');
-    if (!sheet) return jsonResponse({ status: 'ok', rows: [] });
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return jsonResponse({ status: 'ok', rows: [] });
-    const data = sheet.getRange(2, 1, lastRow - 1, 14).getValues();
-    let rows = data.map((r, i) => ({
-      rowIdx:      i + 2,
-      applyId:     r[0],
-      id:          r[1],
-      name:        r[2],
-      dept:        r[3],
-      appliedAt:   r[4],
-      startDate:   r[5] instanceof Date ? Utilities.formatDate(r[5],'Asia/Seoul','yyyy-MM-dd') : String(r[5]||''),
-      endDate:     r[6] instanceof Date ? Utilities.formatDate(r[6],'Asia/Seoul','yyyy-MM-dd') : String(r[6]||''),
-      days:        r[7],
-      leaveType:   r[8],
-      reason:      r[9],
-      status:      r[10],
-      managerApproval: r[11],
-      headApproval:    r[12],
-      approverIds:     r[13],
-    }));
-    // 본인 조회 또는 결재자 조회
-    if (p && p.id && p.role !== 'admin') {
-      const myId = String(p.id);
-      rows = rows.filter(r =>
-        String(r.id) === myId ||
-        String(r.approverIds).split(',').map(s=>s.trim()).includes(myId)
-      );
-    }
-    return jsonResponse({ status: 'ok', rows });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// ── 휴가 승인/반려 ──
-function approveLeave(p) {
-  try {
-    CacheService.getScriptCache().remove('employees_data');
-    const ss = SpreadsheetApp.openById(SS_HR);
-    const sheet = ss.getSheetByName('휴가신청');
-    if (!sheet) return jsonResponse({ status: 'error', message: '휴가신청 시트 없음' });
-    const rowIdx = parseInt(p.rowIdx);
-    const action = p.approveAction; // 'approve' | 'reject'
-    const approverRole = p.approverRole; // 'manager' | 'head'
-    const now = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
-
-    if (approverRole === 'manager') {
-      // L열: 부서장 승인
-      sheet.getRange(rowIdx, 12).setValue(action === 'approve' ? '승인(' + now + ')' : '반려(' + now + ')');
-      if (action === 'reject') sheet.getRange(rowIdx, 11).setValue('반려');
-      // 부서장 승인이면 상태를 '대표승인대기'로
-      if (action === 'approve') sheet.getRange(rowIdx, 11).setValue('대표승인대기');
-    } else if (approverRole === 'head') {
-      // M열: 대표 승인
-      sheet.getRange(rowIdx, 13).setValue(action === 'approve' ? '승인(' + now + ')' : '반려(' + now + ')');
-      sheet.getRange(rowIdx, 11).setValue(action === 'approve' ? '확정' : '반려');
-    }
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// ── 연차 자동 차감 트리거 (매일 00:01 실행) ──
-function deductLeaveDaily() {
-  try {
-    const ss = SpreadsheetApp.openById(SS_HR);
-    const leaveSheet = ss.getSheetByName('휴가신청');
-    const empSheet = ss.getSheetByName('직원정보');
-    if (!leaveSheet || !empSheet) return;
-
-    const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
-    const lastRow = leaveSheet.getLastRow();
-    if (lastRow < 2) return;
-    const leaves = leaveSheet.getRange(2, 1, lastRow - 1, 14).getValues();
-
-    leaves.forEach((r, i) => {
-      const status = String(r[10]);
-      const endDate = r[6] instanceof Date ? Utilities.formatDate(r[6],'Asia/Seoul','yyyy-MM-dd') : String(r[6]||'');
-      const deducted = String(r[13]).includes('차감완료');
-      // 확정 + 종료일 경과 + 미차감
-      if (status === '확정' && endDate < today && !deducted) {
-        const empId = String(r[1]);
-        const days = parseFloat(r[7]) || 0;
-        // 직원정보에서 usedLeave(O열=15) 업데이트
-        const empLastRow = empSheet.getLastRow();
-        const empData = empSheet.getRange(2, 1, empLastRow - 1, 1).getValues();
-        for (let j = 0; j < empData.length; j++) {
-          if (String(empData[j][0]).trim() === empId) {
-            const cur = Number(empSheet.getRange(j + 2, 15).getValue()) || 0;
-            empSheet.getRange(j + 2, 15).setValue(cur + days);
-            break;
-          }
-        }
-        // 결재라인 컬럼에 차감완료 표시
-        leaveSheet.getRange(i + 2, 14).setValue(String(r[13]) + '|차감완료:' + today);
-      }
-    });
-    CacheService.getScriptCache().remove('employees_data');
-  } catch(err) { Logger.log('deductLeaveDaily error: ' + err.message); }
-}
-
-// ── 휴가 취소 (대기 상태만) ──
-function cancelLeave(p) {
-  try {
-    const ss = SpreadsheetApp.openById(SS_HR);
-    const sheet = ss.getSheetByName('휴가신청');
-    if (!sheet) return jsonResponse({ status: 'error', message: '시트 없음' });
-    const rowIdx = parseInt(p.rowIdx);
-    const requesterId = String(p.id || '');
-    // 본인 확인 + 대기 상태 확인
-    const row = sheet.getRange(rowIdx, 1, 1, 11).getValues()[0];
-    if (String(row[1]).trim() !== requesterId) return jsonResponse({ status: 'error', message: '본인만 취소 가능합니다.' });
-    if (String(row[10]).trim() !== '대기') return jsonResponse({ status: 'error', message: '대기 상태만 취소 가능합니다.' });
-    sheet.getRange(rowIdx, 11).setValue('취소');
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// ── 공지게시판 ──
-function getNotices() {
-  try {
-    const ss = SpreadsheetApp.openById(SS_HR);
-    let sheet = ss.getSheetByName('공지게시판');
-    if (!sheet) {
-      sheet = ss.insertSheet('공지게시판');
-      sheet.appendRow(['번호','제목','내용','작성자','작성일','구분']);
-    }
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return jsonResponse({ status:'ok', rows:[] });
-    const data = sheet.getRange(2, 1, lastRow-1, 6).getValues();
-    const rows = data.map(r => ({
-      id: r[0], title: r[1], content: r[2], author: r[3],
-      date: r[4] instanceof Date ? Utilities.formatDate(r[4],'Asia/Seoul','yyyy-MM-dd HH:mm') : String(r[4]||''),
-      category: r[5]||'일반'
-    }));
-    return jsonResponse({ status:'ok', rows });
-  } catch(err) { return jsonResponse({ status:'error', message:err.message }); }
-}
-
-function saveNotice(p) {
-  try {
-    const ss = SpreadsheetApp.openById(SS_HR);
-    let sheet = ss.getSheetByName('공지게시판');
-    if (!sheet) {
-      sheet = ss.insertSheet('공지게시판');
-      sheet.appendRow(['번호','제목','내용','작성자','작성일','구분']);
-    }
-    const lastRow = sheet.getLastRow();
-    const id = lastRow; // 헤더 포함이므로 lastRow = 다음 번호
-    const now = Utilities.formatDate(new Date(),'Asia/Seoul','yyyy-MM-dd HH:mm:ss');
-    sheet.appendRow([id, p.title||'', p.content||'', p.author||'', now, p.category||'일반']);
-    return jsonResponse({ status:'ok' });
-  } catch(err) { return jsonResponse({ status:'error', message:err.message }); }
-}
-
-function jsonResponse(obj) {
-  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
-}
-
-// ── 정보 수정 신청 접수 ──
-function submitInfoRequest(p) {
-  try {
-    const ss = SpreadsheetApp.openById(SS_HR);
-    let sheet = ss.getSheetByName('정보수정신청');
-    if (!sheet) {
-      sheet = ss.insertSheet('정보수정신청');
-      sheet.appendRow(['번호', '신청자', '내용', '신청시각', '처리여부']);
-      sheet.setFrozenRows(1);
-    }
-    const now = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
-    const lastRow = sheet.getLastRow();
-    const no = lastRow; // 헤더 포함이므로 lastRow = 다음 번호
-    sheet.appendRow([no, p.requester||'', p.content||'', now, 'N']);
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// ── 정보 수정 신청 목록 조회 ──
-function getInfoRequests() {
-  try {
-    const ss = SpreadsheetApp.openById(SS_HR);
-    const sheet = ss.getSheetByName('정보수정신청');
-    if (!sheet) return jsonResponse({ status: 'ok', rows: [] });
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return jsonResponse({ status: 'ok', rows: [] });
-    const lastCol = Math.max(5, sheet.getLastColumn());
-    // 헤더 이름 기반으로 컬럼 위치를 동적으로 탐색 (열 순서가 바뀌어도 안전)
-    const header = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h||'').trim());
-    const colIdx = (name, fallback) => {
-      const idx = header.indexOf(name);
-      return idx >= 0 ? idx : fallback;
     };
-    const cNo = colIdx('번호', 0);
-    const cRequester = colIdx('신청자', 1);
-    const cContent = colIdx('내용', 2);
-    const cSubmittedAt = colIdx('신청시각', 3);
-    const cResolved = colIdx('처리여부', 4);
-    const data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
-    const rows = data.map((r, i) => ({
-      rowIdx:      i + 2,
-      no:          r[cNo],
-      requester:   r[cRequester],
-      content:     r[cContent],
-      submittedAt: r[cSubmittedAt] instanceof Date ? Utilities.formatDate(r[cSubmittedAt], 'Asia/Seoul', 'yyyy-MM-dd HH:mm') : String(r[cSubmittedAt]||''),
-      resolved:    String(r[cResolved]||'N').trim()
-    })).reverse(); // 최신순
-    return jsonResponse({ status: 'ok', rows });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
+    check();
+    document.addEventListener('DOMContentLoaded', check);
+    window.addEventListener('load', check);
+  } catch (e) { /* 보정 실패해도 페이지 자체는 정상 동작해야 하므로 무시 */ }
+})();
+</script>
+<title>상담 예약 | 지복득마루</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
 
-// ── 정보 수정 신청 처리 완료 ──
-function resolveInfoRequest(p) {
-  try {
-    const ss = SpreadsheetApp.openById(SS_HR);
-    const sheet = ss.getSheetByName('정보수정신청');
-    if (!sheet) return jsonResponse({ status: 'error', message: '시트 없음' });
-    const rowIdx = parseInt(p.rowIdx);
-    if (isNaN(rowIdx) || rowIdx < 2) return jsonResponse({ status: 'error', message: '잘못된 행 번호' });
-    const lastCol = Math.max(5, sheet.getLastColumn());
-    const header = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(h => String(h||'').trim());
-    const cResolvedIdx = header.indexOf('처리여부');
-    const targetCol = cResolvedIdx >= 0 ? cResolvedIdx + 1 : 5;
-    sheet.getRange(rowIdx, targetCol).setValue('Y');
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-// ── 문자 템플릿 조회 ──
-function getSmsTemplates() {
-  try {
-    const cache = CacheService.getScriptCache();
-    const cached = cache.get('sms_templates');
-    if (cached) return jsonResponse(JSON.parse(cached));
+  :root {
+    --bg: #f5f3ef;
+    --white: #ffffff;
+    --ink: #1a1a1a;
+    --ink-light: #555;
+    --ink-muted: #999;
+    --accent: #7a5c44;
+    --accent-light: #9b7355;
+    --accent-bg: #f5ede6;
+    --border: #ddd;
+    --border-focus: #2b4a3e;
+    --error: #c0392b;
+    --radius: 6px;
+    --font: 'Noto Serif KR', 'Georgia', '바탕', serif;
+    --font-ui: 'Noto Serif KR', 'Georgia', '바탕', serif;
+  }
 
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    let sheet = ss.getSheetByName('문자템플릿');
-    if (!sheet) return jsonResponse({ status: 'ok', templates: {} });
-    const data = sheet.getDataRange().getValues();
-    const templates = {};
-    data.forEach(r => { if (r[0]) templates[String(r[0])] = String(r[1]||''); });
-    const result = { status: 'ok', templates };
-    cache.put('sms_templates', JSON.stringify(result), 600); // 10분 캐시
-    return jsonResponse(result);
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 0;
+  }
 
-// ── 문자 템플릿 저장 ──
-function saveSmsTemplate(p) {
-  try {
-    CacheService.getScriptCache().remove('sms_templates'); // 캐시 무효화
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    let sheet = ss.getSheetByName('문자템플릿');
-    if (!sheet) {
-      sheet = ss.insertSheet('문자템플릿');
-      sheet.appendRow(['key', 'template']);
-      sheet.setFrozenRows(1);
+  /* HEADER */
+  .site-header {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px 12px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .site-header .brand {
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .site-header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+
+  /* 언어 선택 버튼 */
+  .lang-bar {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+  .lang-btn { font-family: var(--font-ui);
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--ink-light);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: all .15s;
+  }
+  .lang-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  /* 히어로 이미지 */
+  .hero-section {
+    position: relative;
+    width: 100%;
+    max-height: 360px;
+    overflow: hidden;
+  }
+  .hero-img {
+    width: 100%;
+    height: 360px;
+    object-fit: cover;
+    display: block;
+    filter: brightness(0.62);
+  }
+  .hero-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 24px;
+  }
+  .hero-content {
+    width: 100%;
+    max-width: 680px;
+    text-align: left;
+  }
+  .hero-title {
+    font-size: 36px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 20px;
+    letter-spacing: 0.02em;
+    font-family: var(--font);
+  }
+  .hero-desc {
+    font-size: 15px;
+    color: rgba(255,255,255,0.88);
+    line-height: 1.9;
+    font-family: var(--font);
+    font-weight: 400;
+    word-break: keep-all;
+    text-align: left;
+  }
+  @media (max-width: 600px) {
+    .hero-img { height: 260px; }
+    .hero-title { font-size: 24px; }
+    .hero-desc { font-size: 13px; line-height: 1.8; }
+    .hero-overlay { padding: 24px 24px; }
+  }
+
+  /* NOTICE */
+  .notice-bar {
+    background: var(--accent-bg);
+    border-left: 3px solid var(--accent);
+    margin: 20px auto;
+    max-width: 680px;
+    padding: 14px 18px;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-size: 13px;
+    color: var(--ink-light);
+    line-height: 1.7;
+    font-family: var(--font);
+  }
+  .notice-bar strong { color: var(--accent); font-family: var(--font); }
+
+  /* FORM WRAPPER */
+  .form-wrap { font-family: var(--font);
+    max-width: 680px;
+    margin: 0 auto 60px;
+    padding: 0 16px;
+  }
+
+  /* SECTION */
+  .form-section {
+    background: var(--white);
+    border-radius: 10px;
+    padding: 28px 24px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+  }
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--accent-bg);
+  }
+
+  /* CALENDAR */
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .cal-nav button {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    width: 32px; height: 32px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--ink-light);
+    transition: all 0.15s;
+  }
+  .cal-nav button:hover { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+  .cal-month { font-size: 15px; font-weight: 700; color: var(--ink); }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .cal-day-label {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    padding: 6px 0;
+    letter-spacing: 0.05em;
+  }
+  .cal-day-label.sun { color: #c0392b; }
+  .cal-day-label.sat { color: #2980b9; }
+
+  .cal-cell {
+    text-align: center;
+    padding: 8px 2px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+    color: var(--ink);
+    background: none;
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cal-cell:hover:not(.disabled):not(.empty) { background: var(--accent-bg); }
+  .cal-cell.selected { background: var(--accent); color: #fff; font-weight: 700; border-color: var(--accent); }
+  .cal-cell.today:not(.selected) { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .cal-cell.disabled { color: var(--ink-muted); cursor: not-allowed; opacity: 0.4; }
+  .cal-cell.empty { cursor: default; }
+  .cal-cell.closed { color: var(--ink-muted); cursor: not-allowed; text-decoration: line-through; opacity: 0.4; }
+  .cal-cell.holiday {
+    flex-direction: column;
+    gap: 1px;
+    color: #c0392b;
+    cursor: not-allowed;
+    text-decoration: none;
+  }
+  .cal-cell.holiday.disabled { opacity: 0.4; }
+  .cal-holiday-name {
+    font-size: 8.5px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  /* TIME SLOTS */
+  .time-slots {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .time-slot {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    text-align: center;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ink);
+    background: var(--white);
+  }
+  .time-slot:hover:not(.taken) { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+  .time-slot.selected { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  .time-slot.taken { background: #f0f0f0; color: var(--ink-muted); cursor: not-allowed; text-decoration: line-through; }
+  .no-date-msg { text-align: center; color: var(--ink-muted); font-size: 13px; padding: 20px 0; }
+
+  /* FIELDS */
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .field-row.full { grid-template-columns: 1fr; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-light);
+    letter-spacing: 0.03em;
+  }
+  .field label .req { color: #c0392b; margin-left: 2px; font-weight: 700; }
+  .field input, .field select, .field textarea {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: var(--font);
+    color: var(--ink);
+    background: var(--white);
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--border-focus); }
+  .field input.error, .field select.error { border-color: var(--error); }
+  .field textarea { resize: vertical; min-height: 90px; }
+
+  /* RADIO / CHECKBOX GROUPS */
+  .radio-group, .check-group {
+    display: flex;
+    flex-wrap: nowrap; /* PC: 무조건 1줄 */
+    gap: 8px;
+    margin-top: 2px;
+  }
+  .radio-btn, .check-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 7px 12px;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+    color: var(--ink-light);
+    white-space: nowrap; /* 텍스트 줄바꿈 방지 */
+  }
+  .radio-btn input, .check-btn input { display: none; }
+  .radio-btn:hover, .check-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .radio-btn.active, .check-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 500;
+  }
+
+  /* TOGGLE */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--ink-light);
+    cursor: pointer;
+  }
+  .toggle-box {
+    width: 18px; height: 18px;
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .toggle-box.checked { background: var(--accent); border-color: var(--accent); }
+  .toggle-box.checked::after { content: '✓'; color: #fff; font-size: 11px; font-weight: 700; }
+
+  /* SPACE TYPE GRID (3열 2줄) */
+  .space-type-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 2px;
+  }
+  .space-btn { font-family: var(--font-ui);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 8px 10px;
+    text-align: center;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ink-light);
+    white-space: nowrap;
+  }
+  .space-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+  .space-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+
+  /* ELEVATOR */
+  .elev-group { display: flex; gap: 8px; }
+  .elev-btn {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px;
+    text-align: center;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ink-light);
+  }
+  .elev-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .elev-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+  /* PRODUCT GRID */
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .product-btn { font-family: var(--font-ui);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 8px;
+    text-align: center;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ink-light);
+    line-height: 1.4;
+  }
+  .product-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+  .product-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+  .product-hint { font-size: 11px; color: var(--ink-muted); margin-top: 8px; line-height: 1.6; }
+
+  /* PRIVACY */
+  .privacy-box {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    font-size: 12px;
+    color: var(--ink-muted);
+    line-height: 1.7;
+    max-height: 100px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    background: #fafafa;
+  }
+
+  /* SUBMIT */
+  .submit-area { text-align: center; margin-top: 8px; }
+  .btn-submit { font-family: var(--font-ui);
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    padding: 16px 60px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: var(--font);
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 0.2s;
+    width: 100%;
+  }
+  .btn-submit:hover { background: var(--accent-light); }
+  .btn-submit:disabled { background: var(--ink-muted); cursor: not-allowed; }
+
+  /* SUCCESS */
+  .success-screen {
+    display: none;
+    text-align: center;
+    padding: 60px 24px;
+    background: var(--white);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .success-icon { font-size: 48px; margin-bottom: 16px; }
+  .success-screen h2 { font-size: 20px; font-weight: 700; margin-bottom: 10px; color: var(--accent); }
+  .success-screen p { font-size: 14px; color: var(--ink-light); line-height: 1.8; }
+
+  /* LOADING */
+  .loading-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(255,255,255,0.8);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .loading-overlay.show { display: flex; }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--accent-bg);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* WORK DATE PICKER */
+  .datepicker-wrap { position: relative; }
+  .datepicker-input {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: var(--font);
+    color: var(--ink);
+    background: var(--white);
+    width: 100%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+    transition: border-color 0.15s;
+  }
+  .datepicker-input:hover { border-color: var(--border-focus); }
+  .datepicker-input .placeholder { color: var(--ink-muted); }
+  .datepicker-input .icon { font-size: 14px; color: var(--ink-muted); }
+  .datepicker-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    z-index: 200;
+    width: 300px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+  }
+  .datepicker-dropdown.open { display: block; }
+  .dp-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .dp-nav button {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    width: 28px; height: 28px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--ink-light);
+    transition: all 0.15s;
+  }
+  .dp-nav button:hover { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+  .dp-month { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .dp-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+  .dp-label {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    padding: 4px 0;
+  }
+  .dp-label.sun { color: #c0392b; }
+  .dp-label.sat { color: #2980b9; }
+  .dp-cell {
+    text-align: center;
+    padding: 5px 2px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ink);
+    min-height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .dp-cell:hover:not(.dp-empty):not(.dp-past) { background: var(--accent-bg); color: var(--accent); }
+  .dp-cell.dp-selected { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; }
+  .dp-cell.dp-today:not(.dp-selected) { color: var(--accent); font-weight: 700; }
+  .dp-cell.dp-past { color: var(--ink-muted); opacity: 0.4; cursor: not-allowed; }
+  .dp-cell.dp-empty { cursor: default; }
+
+  .field-error { font-size: 11px; color: var(--error); margin-top: 2px; }
+
+  @media (max-width: 480px) {
+    .field-row { grid-template-columns: 1fr; }
+    .product-grid { grid-template-columns: repeat(2, 1fr); }
+    .time-slots { grid-template-columns: repeat(2, 1fr); }
+    .radio-group, .check-group { flex-wrap: wrap; } /* 모바일에서만 줄바꿈 허용 */
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <span>접수 중입니다...</span>
+</div>
+
+<header class="site-header" style="display:none;"></header>
+
+<!-- 히어로 이미지 섹션 -->
+<div class="hero-section">
+  <img src="https://raw.githubusercontent.com/chiwoo3292-sudo/JBDSTOCK/refs/heads/main/%EC%98%88%EC%95%BD%ED%8F%BC%EC%9D%B4%EB%AF%B8%EC%A7%80.avif" alt="지복득마루 쇼룸" class="hero-img">
+  <div class="hero-overlay">
+    <div class="hero-content">
+      <h2 class="hero-title" data-i18n="heroTitle">상담 예약</h2>
+      <p class="hero-desc" data-i18n="heroDesc">원목마루는 빛과 공간에 따라 색감과 분위기가 달라지기 때문에 사진과 실제가 다르게 보일 수 있습니다. 지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며 가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 월별 휴무안내 팝업 -->
+<div id="monthlyNoticeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;width:90%;max-width:480px;padding:28px 28px 22px;box-shadow:0 8px 40px rgba(0,0,0,0.2);position:relative;max-height:85vh;overflow-y:auto;">
+    <button onclick="closeMonthlyNotice()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
+    <div id="monthlyNoticeContent" style="font-family:var(--font);"></div>
+    <div style="text-align:center;margin-top:20px;">
+      <label style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:#999;cursor:pointer;">
+        <input type="checkbox" id="dontShowToday" onchange="handleDontShow(this)">
+        <span data-i18n="dontShow">오늘 하루 보지 않기</span>
+      </label>
+    </div>
+    <div style="text-align:center;margin-top:12px;">
+      <button onclick="closeMonthlyNotice()" style="padding:10px 32px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;" data-i18n="close">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="form-wrap">
+
+  <!-- 언어 선택 -->
+  <div class="lang-bar" style="justify-content:flex-start;margin-bottom:16px;padding-top:8px;">
+    <button class="lang-btn active" onclick="setLang('ko')">한국어</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('ja')">日本語</button>
+    <button class="lang-btn" onclick="setLang('zh')">中文</button>
+  </div>
+
+  <!-- 월별 휴무안내 (시트 데이터 자동 반영) -->
+  <div id="monthlyNoticeBar" style="display:none;margin-bottom:14px;padding:14px 16px;background:#fff4e5;border:1px solid #ffd9a0;border-radius:8px;font-size:14px;line-height:1.8;color:#7a4a00;">
+    <strong style="color:#b35c00;font-size:18px;">📌 휴무 안내</strong><br>
+    <span id="monthlyNoticeText" style="font-size:14px;"></span>
+  </div>
+
+  <div class="notice-bar">
+    <strong data-i18n="noticeTitle">안내사항</strong><br>
+    <span data-i18n="notice1">· 당일 예약은 유선으로만 가능합니다. (02-576-7736)</span><br>
+    <span data-i18n="notice2">· 매장 상황에 따라 대기가 발생할 수 있습니다.</span>
+  </div>
+
+  <div id="mainForm">
+
+    <!-- ① 예약 일정 -->
+    <div class="form-section">
+      <div class="section-title" data-i18n="sec1">① 예약 일정</div>
+
+      <div class="cal-nav">
+        <button id="prevMonth">‹</button>
+        <span class="cal-month" id="calMonthLabel"></span>
+        <button id="nextMonth">›</button>
+      </div>
+
+      <div class="cal-grid" id="calGrid"></div>
+
+      <div id="timeSlotArea">
+        <div class="no-date-msg" data-i18n="selectDate">날짜를 선택해주세요</div>
+      </div>
+    </div>
+
+    <!-- ② 예약자 정보 -->
+    <div class="form-section">
+      <div class="section-title" data-i18n="sec2">② 예약자 정보</div>
+
+      <div class="field-row" style="margin-bottom:12px;">
+        <div class="field">
+          <label data-i18n="visitorTypeLabel">예약자 유형 <span class="req">*</span></label>
+          <div class="radio-group" id="visitorTypeGroup">
+            <label class="radio-btn active" data-val="개인 소비자">
+              <input type="radio" name="visitorType" value="개인 소비자" checked> <span data-i18n="vt1">개인 소비자</span>
+            </label>
+            <label class="radio-btn" data-val="인테리어업체">
+              <input type="radio" name="visitorType" value="인테리어업체"> <span data-i18n="vt2">인테리어업체</span>
+            </label>
+            <label class="radio-btn" data-val="건축사무소">
+              <input type="radio" name="visitorType" value="건축사무소"> <span data-i18n="vt3">건축사무소</span>
+            </label>
+            <label class="radio-btn" data-val="건설사">
+              <input type="radio" name="visitorType" value="건설사"> <span data-i18n="vt4">건설사</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row" style="margin-bottom:12px;">
+        <div class="field">
+          <label data-i18n="visitCountLabel">방문 인원</label>
+          <div class="radio-group" id="visitCountGroup">
+            <label class="radio-btn active" data-val="1명 (개인)">
+              <input type="radio" name="visitCount" value="1명 (개인)" checked> <span data-i18n="vc1">1명 (개인)</span>
+            </label>
+            <label class="radio-btn" data-val="2명">
+              <input type="radio" name="visitCount" value="2명"> <span data-i18n="vc2">2명</span>
+            </label>
+            <label class="radio-btn" data-val="3명">
+              <input type="radio" name="visitCount" value="3명"> <span data-i18n="vc3">3명</span>
+            </label>
+            <label class="radio-btn" data-val="4명">
+              <input type="radio" name="visitCount" value="4명"> <span data-i18n="vc4">4명</span>
+            </label>
+            <label class="radio-btn" data-val="5인 이상">
+              <input type="radio" name="visitCount" value="5인 이상"> <span data-i18n="vc5">5인 이상</span>
+            </label>
+          </div>
+        </div>
+        <div class="field" style="justify-content:flex-end;">
+          <label>&nbsp;</label>
+          <div class="toggle-row" id="revisitToggle">
+            <div class="toggle-box" id="revisitBox"></div>
+            <span data-i18n="revisit">재방문</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label data-i18n="nameLabel">예약자 성함 <span class="req">*</span></label>
+          <input type="text" id="fName" data-i18n-placeholder="namePh" placeholder="홍길동">
+          <span class="field-error" id="errName"></span>
+        </div>
+        <div class="field">
+          <label data-i18n="phoneLabel">연락처 <span class="req">*</span></label>
+          <input type="tel" id="fPhone" data-i18n-placeholder="phonePh" placeholder="010-0000-0000">
+          <span class="field-error" id="errPhone"></span>
+        </div>
+      </div>
+
+      <div class="field-row full">
+        <div class="field">
+          <label data-i18n="companyLabel">업체명 <span style="font-size:11px;color:var(--ink-muted);"><span data-i18n="companyHint">인테리어 업체 / 턴키 업체 기입</span></span></label>
+          <input type="text" id="fCompany">
+        </div>
+      </div>
+    </div>
+
+    <!-- ③ 시공 정보 -->
+    <div class="form-section">
+      <div class="section-title" data-i18n="sec3">③ 시공 정보</div>
+
+      <div class="field-row full" style="margin-bottom:12px;">
+        <div class="field">
+          <label data-i18n="addressLabel">현장 주소</label>
+          <input type="text" id="fAddress" data-i18n-placeholder="addressPh" placeholder="서울시 강남구 **아파트 101동 1101호">
+        </div>
+      </div>
+
+      <div class="field-row full">
+        <div class="field">
+          <label data-i18n="sizeLabel">평수</label>
+          <input type="text" id="fSize" data-i18n-placeholder="sizePh" placeholder="예: 35평">
+        </div>
+      </div>
+
+      <div class="field-row full" style="margin-bottom:12px;">
+        <div class="field">
+          <label data-i18n="workDateLabel">마루 시공 예정일</label>
+          <div class="datepicker-wrap" id="workDateWrap">
+            <div class="datepicker-input" id="workDateInput">
+              <span id="workDateDisplay" class="placeholder" data-i18n="selectDatePh">날짜를 선택해주세요</span>
+              <span class="icon">📅</span>
+            </div>
+            <div class="datepicker-dropdown" id="workDateDropdown">
+              <div class="dp-nav">
+                <button id="dpPrev">‹</button>
+                <span class="dp-month" id="dpMonthLabel"></span>
+                <button id="dpNext">›</button>
+              </div>
+              <div class="dp-grid" id="dpGrid"></div>
+            </div>
+          </div>
+          <input type="hidden" id="fWorkDate">
+        </div>
+      </div>
+
+      <div class="field-row full">
+        <div class="field">
+          <label data-i18n="workPeriodLabel">공사 기간</label>
+          <input type="text" id="fWorkPeriod" data-i18n-placeholder="workPeriodPh" placeholder="예: 2주, 10/1~10/14">
+        </div>
+      </div>
+    </div>
+
+    <!-- ④ 전달 사항 -->
+    <div class="form-section">
+      <div class="section-title" data-i18n="sec4">④ 전달 사항</div>
+      <div class="field">
+        <label data-i18n="memoLabel">기타 문의 및 전달 사항</label>
+        <textarea id="fMemo" data-i18n-placeholder="memoPh"></textarea>
+      </div>
+    </div>
+
+    <!-- ⑤ 개인정보 동의 -->
+    <div class="form-section">
+      <div class="section-title" data-i18n="sec5">⑤ 개인정보 활용 동의</div>
+      <div class="privacy-box">
+        <span data-i18n="privacy1">수집하는 개인정보 항목 : 성함, 연락처, 주소, 시공 현장 정보 등</span><br>
+        <span data-i18n="privacy2">수집 및 이용 목적 : 상담 예약 확인 및 시공 및 AS서비스 제공</span><br>
+        <span data-i18n="privacy3">귀하는 개인정보 수집·이용에 대한 동의를 거부하실 수 있으나, 동의 거부 시 서비스 이용이 제한됩니다.</span>
+      </div>
+      <div class="toggle-row" id="privacyToggle">
+        <div class="toggle-box" id="privacyBox"></div>
+        <span data-i18n="privacyAgree">개인정보 수집 및 활용에 동의합니다.</span> <span class="req" style="color:#c0392b;margin-left:2px;font-weight:700;">*</span>
+      </div>
+      <span class="field-error" id="errPrivacy"></span>
+    </div>
+
+    <div class="submit-area">
+      <button class="btn-submit" id="btnSubmit" data-i18n="submitBtn">예약 접수하기</button>
+    </div>
+
+  </div><!-- /mainForm -->
+
+  <div class="success-screen" id="successScreen">
+    <h2 data-i18n="successTitle">예약 접수 완료</h2>
+    <p data-i18n="successDesc">
+      상담 예약이 정상적으로 접수되었습니다.<br>
+      담당자 확인 후 <strong>유선으로 연락</strong>드리겠습니다.<br><br>
+      감사합니다. <strong>지복득마루</strong>
+    </p>
+  </div>
+
+</div><!-- /form-wrap -->
+
+<script>
+// ─────────────────────────────────────────
+// 다국어 (i18n)
+// ─────────────────────────────────────────
+const I18N = {
+  ko: {
+    title:'상담 예약', heroTitle:'상담 예약',
+    heroDesc:'원목마루는 빛과 공간에 따라 색감과 분위기가 달라지기 때문에 사진과 실제가 다르게 보일 수 있습니다. 지복득마루 쇼룸에서 직접 눈으로 확인하고, 손으로 질감을 느끼며 가장 솔직한 모습 그대로의 원목을 경험해 보시길 권합니다.',
+    dontShow:'오늘 하루 보지 않기', close:'닫기',
+    noticeTitle:'안내사항', notice1:'· 당일 예약은 유선으로만 가능합니다. (02-576-7736)', notice2:'· 매장 상황에 따라 대기가 발생할 수 있습니다.',
+    sec1:'① 예약 일정', sec2:'② 예약자 정보', sec3:'③ 시공 정보', sec4:'④ 전달 사항', sec5:'⑤ 개인정보 활용 동의',
+    selectDate:'날짜를 선택해주세요', selectDatePh:'날짜를 선택해주세요',
+    visitorTypeLabel:'예약자 유형', vt1:'개인 소비자', vt2:'인테리어업체', vt3:'건축사무소', vt4:'건설사',
+    visitCountLabel:'방문 인원', vc1:'1명 (개인)', vc2:'2명', vc3:'3명', vc4:'4명', vc5:'5인 이상', revisit:'재방문',
+    nameLabel:'예약자 성함', namePh:'홍길동', phoneLabel:'연락처', phonePh:'010-0000-0000',
+    companyLabel:'업체명', companyHint:'인테리어 업체 / 턴키 업체 기입',
+    addressLabel:'현장 주소', addressPh:'서울시 강남구 **아파트 101동 1101호',
+    spaceTypeLabel:'공간 유형', st1:'아파트', st2:'빌라', st3:'주택', st4:'상가/상업공간', st5:'사무실', st6:'오피스텔',
+    sizeLabel:'평수', sizePh:'예: 35평', floorLabel:'층수', floorPh:'예: 3층',
+    elevLabel:'엘리베이터', elev1:'있음', elev2:'없음', workDateLabel:'마루 시공 예정일',
+    workPeriodLabel:'공사 기간', workPeriodPh:'예: 2주, 10/1~10/14',
+    productLabel:'선호 제품', productHint:'(복수선택 가능)',
+    pb1:'밝은 마루', pb2:'내추럴 마루', pb3:'어두운 마루', pb4:'중폭\n(165mm)', pb5:'광폭\n(190mm)', pb6:'초광폭\n(240mm)', pb7:'옹이 있음', pb8:'옹이 없음',
+    productDesc:'선호 제품 선택 시 해당 특성에 맞는 제품을 추천해드립니다.',
+    memoLabel:'기타 문의 및 전달 사항', memoPh:'궁금한 점이나 전달하실 내용을 자유롭게 입력해주세요.',
+    privacy1:'수집하는 개인정보 항목 : 성함, 연락처, 주소, 시공 현장 정보 등',
+    privacy2:'수집 및 이용 목적 : 상담 예약 확인 및 시공 및 AS서비스 제공',
+    privacy3:'귀하는 개인정보 수집·이용에 대한 동의를 거부하실 수 있으나, 동의 거부 시 서비스 이용이 제한됩니다.',
+    privacyAgree:'개인정보 수집 및 활용에 동의합니다.',
+    submitBtn:'예약 접수하기', successTitle:'예약 접수 완료',
+    successDesc:'상담 예약이 정상적으로 접수되었습니다.<br>문의 : <strong>02-516-7736 / 010-5264-7736</strong><br><br>감사합니다. <strong>지복득마루</strong>',
+  },
+  en: {
+    title:'Consultation Booking', heroTitle:'Consultation Booking',
+    heroDesc:'The color and atmosphere of solid wood flooring can vary depending on light and space, so it may look different from photos.\nWe invite you to visit the Jibokdeuk Maru showroom to see, touch, and experience the wood in its most authentic form.',
+    dontShow:"Don't show today", close:'Close',
+    noticeTitle:'Notice', notice1:'· Same-day reservations are only available by phone. (02-576-7736)', notice2:'· Waiting may occur depending on showroom conditions.',
+    sec1:'① Schedule', sec2:'② Visitor Info', sec3:'③ Installation Info', sec4:'④ Message', sec5:'⑤ Privacy Agreement',
+    selectDate:'Please select a date', selectDatePh:'Please select a date',
+    visitorTypeLabel:'Visitor Type', vt1:'Individual', vt2:'Interior Company', vt3:'Architecture Office', vt4:'Construction Company',
+    visitCountLabel:'No. of Visitors', vc1:'1 Person', vc2:'2 Persons', vc3:'3 Persons', vc4:'4 Persons', vc5:'5+', revisit:'Return Visit',
+    nameLabel:'Name', namePh:'John Doe', phoneLabel:'Phone', phonePh:'+82-10-0000-0000',
+    companyLabel:'Company', companyHint:'Interior / Turnkey company',
+    addressLabel:'Site Address', addressPh:'Full address of the installation site',
+    spaceTypeLabel:'Space Type', st1:'Apartment', st2:'Villa', st3:'House', st4:'Commercial', st5:'Office', st6:'Officetel',
+    sizeLabel:'Size', sizePh:'e.g. 35 pyeong', floorLabel:'Floor', floorPh:'e.g. 3rd floor',
+    elevLabel:'Elevator', elev1:'Yes', elev2:'No', workDateLabel:'Planned Installation Date',
+    workPeriodLabel:'Construction Period', workPeriodPh:'e.g. 2 weeks, 10/1~10/14',
+    productLabel:'Preferred Product', productHint:'(Multiple selection)',
+    pb1:'Light Wood', pb2:'Natural Wood', pb3:'Dark Wood', pb4:'Medium\n(165mm)', pb5:'Wide\n(190mm)', pb6:'Extra Wide\n(240mm)', pb7:'With Knots', pb8:'Without Knots',
+    productDesc:'We will recommend products matching your preferences.',
+    memoLabel:'Additional Notes', memoPh:'Please enter any questions or special requests.',
+    privacy1:'Information collected: Name, contact, address, installation site info, etc.',
+    privacy2:'Purpose: Consultation scheduling and installation/AS service',
+    privacy3:'You may refuse consent, but service use will be restricted.',
+    privacyAgree:'I agree to the collection and use of personal information.',
+    submitBtn:'Submit Reservation', successTitle:'Reservation Submitted',
+    successDesc:'Your reservation has been received.<br>We will send a confirmation text message.<br>Inquiry : <strong>02-516-7736 / 010-5264-7736</strong><br><br>Thank you. <strong>Jibokdeuk Maru</strong>',
+  },
+  ja: {
+    title:'ご予約', heroTitle:'ご予約',
+    heroDesc:'無垢フローリングは光や空間によって色合いや雰囲気が異なるため、写真と実物が異なって見えることがあります。\nショールームで実際に目で確かめ、手で質感を感じ、本物の木材をぜひ体験してください。',
+    dontShow:'今日は表示しない', close:'閉じる',
+    noticeTitle:'ご案内', notice1:'· 当日予約はお電話のみ受け付けております。(02-576-7736)', notice2:'· 店舗状況によりお待ちいただく場合がございます。',
+    sec1:'① 予約日程', sec2:'② 予約者情報', sec3:'③ 施工情報', sec4:'④ メッセージ', sec5:'⑤ 個人情報同意',
+    selectDate:'日付を選択してください', selectDatePh:'日付を選択してください',
+    visitorTypeLabel:'予約者タイプ', vt1:'個人のお客様', vt2:'インテリア業者', vt3:'建築事務所', vt4:'建設会社',
+    visitCountLabel:'来店人数', vc1:'1名', vc2:'2名', vc3:'3名', vc4:'4名', vc5:'5名以上', revisit:'再来店',
+    nameLabel:'お名前', namePh:'山田 太郎', phoneLabel:'電話番号', phonePh:'+82-10-0000-0000',
+    companyLabel:'会社名', companyHint:'インテリア/ターンキー業者',
+    addressLabel:'現場住所', addressPh:'施工現場の住所を入力',
+    spaceTypeLabel:'スペースタイプ', st1:'マンション', st2:'ヴィラ', st3:'一戸建て', st4:'商業施設', st5:'オフィス', st6:'オフィステル',
+    sizeLabel:'面積', sizePh:'例：35坪', floorLabel:'階数', floorPh:'例：3階',
+    elevLabel:'エレベーター', elev1:'あり', elev2:'なし', workDateLabel:'施工予定日',
+    workPeriodLabel:'工事期間', workPeriodPh:'例：2週間、10/1〜10/14',
+    productLabel:'希望製品', productHint:'（複数選択可）',
+    pb1:'明るい床材', pb2:'ナチュラル床材', pb3:'ダーク床材', pb4:'中幅\n(165mm)', pb5:'広幅\n(190mm)', pb6:'超広幅\n(240mm)', pb7:'節あり', pb8:'節なし',
+    productDesc:'ご希望に合った製品をご提案いたします。',
+    memoLabel:'その他ご要望', memoPh:'ご質問やご要望をご自由にお書きください。',
+    privacy1:'収集する個人情報：氏名、連絡先、住所、施工現場情報など',
+    privacy2:'利用目的：予約確認および施工・アフターサービスの提供',
+    privacy3:'同意を拒否することができますが、拒否した場合サービスのご利用が制限されます。',
+    privacyAgree:'個人情報の収集および利用に同意します。',
+    submitBtn:'予約を申し込む', successTitle:'予約受付完了',
+    successDesc:'ご予約が正常に受け付けられました。<br>確定後、確認SMSをお送りします。<br>お問い合わせ : <strong>02-516-7736 / 010-5264-7736</strong><br><br>ありがとうございます。<strong>ジボクドゥクマル</strong>',
+  },
+  zh: {
+    title:'预约咨询', heroTitle:'预约咨询',
+    heroDesc:'实木地板因光线和空间不同，色调和氛围也会有所差异，实物可能与照片有所不同。\n欢迎亲自前往展厅，用眼睛确认，用手感受质感，体验最真实的原木。',
+    dontShow:'今日不再显示', close:'关闭',
+    noticeTitle:'注意事项', notice1:'· 当日预约仅接受电话预约。(02-576-7736)', notice2:'· 根据展厅情况，可能需要等待。',
+    sec1:'① 预约日程', sec2:'② 预约者信息', sec3:'③ 施工信息', sec4:'④ 留言', sec5:'⑤ 个人信息同意',
+    selectDate:'请选择日期', selectDatePh:'请选择日期',
+    visitorTypeLabel:'访客类型', vt1:'个人消费者', vt2:'室内装修公司', vt3:'建筑事务所', vt4:'建设公司',
+    visitCountLabel:'来访人数', vc1:'1人', vc2:'2人', vc3:'3人', vc4:'4人', vc5:'5人以上', revisit:'再次来访',
+    nameLabel:'姓名', namePh:'张三', phoneLabel:'联系方式', phonePh:'+82-10-0000-0000',
+    companyLabel:'公司名称', companyHint:'室内装修/整包公司',
+    addressLabel:'施工地址', addressPh:'请输入施工现场地址',
+    spaceTypeLabel:'空间类型', st1:'公寓', st2:'别墅', st3:'住宅', st4:'商业空间', st5:'办公室', st6:'商住两用',
+    sizeLabel:'面积', sizePh:'例：35坪', floorLabel:'楼层', floorPh:'例：3楼',
+    elevLabel:'电梯', elev1:'有', elev2:'无', workDateLabel:'计划施工日期',
+    workPeriodLabel:'施工期间', workPeriodPh:'例：2周、10/1~10/14',
+    productLabel:'偏好产品', productHint:'（可多选）',
+    pb1:'浅色木地板', pb2:'自然色木地板', pb3:'深色木地板', pb4:'中幅\n(165mm)', pb5:'宽幅\n(190mm)', pb6:'超宽幅\n(240mm)', pb7:'有节疤', pb8:'无节疤',
+    productDesc:'选择偏好产品后，我们将为您推荐最合适的产品。',
+    memoLabel:'其他留言', memoPh:'请自由填写您的问题或特别要求。',
+    privacy1:'收集的个人信息：姓名、联系方式、地址、施工现场信息等',
+    privacy2:'收集目的：预约确认及施工/售后服务提供',
+    privacy3:'您可拒绝同意，但拒绝后服务使用将受到限制。',
+    privacyAgree:'我同意收集和使用个人信息。',
+    submitBtn:'提交预约', successTitle:'预约提交完成',
+    successDesc:'您的咨询预约已成功提交。<br>预约确认后将发送确认短信。<br>咨询 : <strong>02-516-7736 / 010-5264-7736</strong><br><br>感谢您。<strong>지복득마루</strong>',
+  },
+};
+
+
+let currentLang = 'ko';
+
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.querySelector(`.lang-btn[onclick="setLang('${lang}')"]`);
+  if (activeBtn) activeBtn.classList.add('active');
+  const t = I18N[lang] || I18N.ko;
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (t[key] === undefined) return;
+    const val = t[key];
+    // HTML 포함 키는 innerHTML로
+    if (key === 'successDesc' || val.includes('<br>') || val.includes('<strong>')) {
+      el.innerHTML = val;
+    } else if (el.classList.contains('hero-desc')) {
+      el.innerHTML = val.replace(/\n/g, '<br>');
+    } else if (el.tagName === 'LABEL') {
+      // label 안의 req(*) span 보존: 텍스트 노드만 교체
+      const reqSpan = el.querySelector('.req');
+      const hintSpan = el.querySelector('span:not(.req)');
+      // 먼저 첫 번째 텍스트 노드만 교체
+      let replaced = false;
+      el.childNodes.forEach(n => {
+        if (n.nodeType === 3 && n.textContent.trim() && !replaced) {
+          n.textContent = val + ' ';
+          replaced = true;
+        }
+      });
+      if (!replaced) el.prepend(document.createTextNode(val + ' '));
+    } else {
+      el.textContent = val;
     }
-    const data = sheet.getDataRange().getValues();
-    let found = false;
-    for (let i = 1; i < data.length; i++) {
-      if (String(data[i][0]) === String(p.key)) {
-        sheet.getRange(i + 1, 2).setValue(p.text || '');
-        found = true; break;
+  });
+
+  // placeholder 번역
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.dataset.i18nPlaceholder;
+    if (t[key] !== undefined) el.placeholder = t[key];
+  });
+
+  // 날짜 선택 span placeholder (workDateDisplay)
+  const workDateDisp = document.getElementById('workDateDisplay');
+  if (workDateDisp && workDateDisp.classList.contains('placeholder')) {
+    workDateDisp.textContent = t.selectDatePh || '날짜를 선택해주세요';
+  }
+
+  document.documentElement.lang = lang;
+  // 달력도 언어에 맞게 다시 렌더링
+  if (typeof renderCalendar === 'function') renderCalendar();
+}
+
+// ─────────────────────────────────────────
+// 월별 휴무안내 팝업
+// ─────────────────────────────────────────
+async function loadMonthlyNotice() {
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getMonthlyNotice`);
+    const data = await res.json();
+    if (data.status === 'ok' && data.notices) {
+      const now = new Date();
+      const key = `${now.getFullYear()}_${now.getMonth() + 1}`;
+      const noticeText = data.notices[key] || '';
+      if (!noticeText) return;
+      const bar = document.getElementById('monthlyNoticeBar');
+      const text = document.getElementById('monthlyNoticeText');
+      if (bar && text) {
+        text.innerHTML = noticeText.replace(/\n/g, '<br>');
+        bar.style.display = 'block';
       }
     }
-    if (!found) sheet.appendRow([p.key, p.text || '']);
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
+  } catch(e) { /* 조용히 무시 */ }
 }
 
-// ── 문자 발송 내역 기록 ──
-// 문자발송내역을 최근 10건만 남기고 오래된 것부터 자동 삭제
-function trimSmsLog(sheet) {
-  try {
-    const KEEP = 10;
-    const lastRow = sheet.getLastRow();
-    if (lastRow > KEEP + 1) { // +1은 헤더행
-      const deleteCount = lastRow - 1 - KEEP;
-      sheet.deleteRows(2, deleteCount); // 2행(가장 오래된 데이터)부터 삭제
-    }
-  } catch (e) { /* 정리 실패해도 본 기능엔 영향 없도록 무시 */ }
+window.closeMonthlyNotice = function() {};
+
+// ─────────────────────────────────────────
+// APPS SCRIPT URL (배포 후 여기에 입력)
+// ─────────────────────────────────────────
+// ★ 사내계정에서 RESERVE스크립트 재배포 후 새 /exec URL로 교체 ★
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyA2-Dp_MlixvFD6nRBGUtxuDPesDW1wG-zVXUN9GlIhm3Fd2fTiaVuDDhpoUaOQp32aA/exec';
+
+// ─────────────────────────────────────────
+// 슬롯 설정 (추후 구글시트에서 가져올 것)
+// 형식: { "YYYY-MM-DD": ["09:00~10:00", "10:00~11:00", ...] }
+// false = 해당 날짜 비활성 / [] = 슬롯없음
+// ─────────────────────────────────────────
+const SLOT_CONFIG = {
+  // 운영: 월~토 (일요일 휴무)
+  // 평일(월~금): 10:00~17:00, 30분 단위 = 14개 슬롯
+  _defaultWeekday: [
+    "10:00~10:30","10:30~11:00",
+    "11:00~11:30","11:30~12:00",
+    "12:00~12:30","12:30~13:00",
+    "13:00~13:30","13:30~14:00",
+    "14:00~14:30","14:30~15:00",
+    "15:00~15:30","15:30~16:00",
+    "16:00~16:30","16:30~17:00"
+  ],
+  // 토요일: 10:00~16:00, 30분 단위 = 12개 슬롯 (평일보다 2개 적음)
+  _defaultSaturday: [
+    "10:00~10:30","10:30~11:00",
+    "11:00~11:30","11:30~12:00",
+    "12:00~12:30","12:30~13:00",
+    "13:00~13:30","13:30~14:00",
+    "14:00~14:30","14:30~15:00",
+    "15:00~15:30","15:30~16:00"
+  ],
+  _closedDays: [0], // 0=일요일만 휴무 (공휴일은 별도로 holidayMap에서 처리)
+};
+
+// 요일(0~6)에 맞는 기본 슬롯 목록 반환 (일요일은 빈 배열)
+function getDefaultSlotsForDow(dow) {
+  if (dow === 0) return [];
+  if (dow === 6) return SLOT_CONFIG._defaultSaturday;
+  return SLOT_CONFIG._defaultWeekday;
 }
 
-function logSms(p) {
-  try {
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    let sheet = ss.getSheetByName('문자발송내역');
-    if (!sheet) {
-      sheet = ss.insertSheet('문자발송내역');
-      sheet.appendRow(['발송시각', '유형', '수신자', '연락처', '결과']);
-      sheet.setFrozenRows(1);
-    }
-    const now = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
-    sheet.appendRow([now, p.type||'', p.name||'', p.phone||'', p.result||'']);
-    trimSmsLog(sheet); // ★ 최근 10건만 유지 (자동 정리)
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
+// ─────────────────────────────────────────
+// 공휴일 (구글시트 [공휴일] 시트 연동)
+// ─────────────────────────────────────────
+let holidayMap = {}; // { "2026-01-01": "신정", ... }
 
-// ── 문자 발송 내역 조회 ──
-function getSmsLog() {
+async function loadHolidays() {
   try {
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    const sheet = ss.getSheetByName('문자발송내역');
-    if (!sheet) return jsonResponse({ status: 'ok', rows: [] });
-    trimSmsLog(sheet); // ★ 조회 시점에도 혹시 남아있는 초과분 정리
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return jsonResponse({ status: 'ok', rows: [] });
-    const data = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
-    const rows = data.map(r => ({
-      sentAt:  r[0] instanceof Date ? Utilities.formatDate(r[0],'Asia/Seoul','yyyy-MM-dd HH:mm') : String(r[0]||''),
-      type:    r[1], name: r[2], phone: r[3], result: r[4]
-    })).reverse();
-    return jsonResponse({ status: 'ok', rows });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
-
-// ── 알리고 문자 발송 (실제 발송 로직은 ERP스크립트 웹앱에 있음 — 여기서는 그걸 호출) ──
-// API Key/User ID/발신번호는 ERP스크립트 쪽 PropertiesService에 중앙 저장되어 있음
-// (ERP 화면의 "문자발송 탭 > 알리고 API 설정"에서 저장 → saveAligoSettings)
-function sendAligoViaErp(receiver, msg) {
-  try {
-    const settingsRes = UrlFetchApp.fetch(ERP_URL + '?action=getAligoSettings', { muteHttpExceptions: true });
-    const settings = (JSON.parse(settingsRes.getContentText()).settings) || {};
-    if (!settings.apiKey || !settings.userId || !settings.sender) {
-      return { status: 'error', message: '알리고 API 설정 없음 (ERP 화면 > 문자발송 탭에서 설정 필요)' };
-    }
-    const params = '?action=sendAligo'
-      + '&apiKey='   + encodeURIComponent(settings.apiKey)
-      + '&userId='   + encodeURIComponent(settings.userId)
-      + '&sender='   + encodeURIComponent(settings.sender)
-      + '&receiver=' + encodeURIComponent(receiver)
-      + '&msg='      + encodeURIComponent(msg);
-    const res = UrlFetchApp.fetch(ERP_URL + params, { muteHttpExceptions: true });
-    return JSON.parse(res.getContentText());
-  } catch (err) {
-    return { status: 'error', message: err.message };
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getHolidays`);
+    const data = await res.json();
+    if (data.status === 'ok' && data.holidays) holidayMap = data.holidays;
+  } catch (e) {
+    console.warn('공휴일 정보 로드 실패:', e.message);
+    holidayMap = {};
   }
 }
 
-// ── 당일예약안내 문자 발송 (트리거: 매일 09:00, 일요일 제외) ──
-// 앱스스크립트 트리거: 시간 기반 → 매일 오전 9시 → sendTodaySms 함수 실행
-function sendTodaySms() {
-  const today = new Date();
-  if (today.getDay() === 0) return; // 일요일 제외
+// ─────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────
+let curYear, curMonth, selectedDate = null, selectedTime = null;
+let revisit = false, privacyAgree = false;
+let visitorType = '개인 소비자', visitCount = '1명';
+let bookedSlots = {};
 
-  // 쇼룸상담·문자템플릿 모두 고객예약 파일(SS_RESERVE)에 있음
-  const ssReserve = SpreadsheetApp.openById(SS_RESERVE);
-  const todayStr = Utilities.formatDate(today, 'Asia/Seoul', 'yyyy-MM-dd');
+// ─────────────────────────────────────────
+// CALENDAR
+// ─────────────────────────────────────────
+async function initCalendar() {
+  const now = new Date();
+  curYear = now.getFullYear();
+  curMonth = now.getMonth();
+  await loadHolidays();
+  renderCalendar();
+}
 
-  // 쇼룸상담 시트에서 오늘 일정인 데이터 중 연락처 있는 것 조회
-  const sheet = ssReserve.getSheetByName('쇼룸상담');
-  if (!sheet) return;
-  const data = sheet.getDataRange().getValues();
-  const headers = data[0];
-  const dateIdx = headers.indexOf('date');
-  const phoneIdx = headers.indexOf('phone');
-  const nameIdx = headers.indexOf('name');
-  const counselorIdx = headers.indexOf('counselor');
-  const timeIdx = headers.indexOf('time');
-  if (dateIdx < 0 || phoneIdx < 0) return;
+function renderCalendar() {
+  const label = document.getElementById('calMonthLabel');
+  const lang = currentLang || 'ko';
 
-  // 문자 템플릿 로드
-  const tmplSheet = ssReserve.getSheetByName('문자템플릿');
-  let todayTmpl = '[지복득마루] {이름}님, 오늘 쇼룸 방문 예정이십니다.\n방문일정: {일정}\n담당자: {상담자}';
-  if (tmplSheet) {
-    const tmplData = tmplSheet.getDataRange().getValues();
-    tmplData.forEach(r => { if (String(r[0]) === 'today') todayTmpl = String(r[1]||todayTmpl); });
+  // 언어별 월 표시
+  const monthLabels = {
+    ko: `${curYear}년 ${curMonth + 1}월`,
+    en: ['January','February','March','April','May','June','July','August','September','October','November','December'][curMonth] + ` ${curYear}`,
+    ja: `${curYear}年 ${curMonth + 1}月`,
+    zh: `${curYear}年 ${curMonth + 1}月`,
+  };
+  label.textContent = monthLabels[lang] || monthLabels.ko;
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  // 언어별 요일
+  const dayLabels = {
+    ko: ['일','월','화','수','목','금','토'],
+    en: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+    ja: ['日','月','火','水','木','金','土'],
+    zh: ['日','一','二','三','四','五','六'],
+  };
+  const days = dayLabels[lang] || dayLabels.ko;
+  days.forEach((d, i) => {
+    const el = document.createElement('div');
+    el.className = 'cal-day-label' + (i === 0 ? ' sun' : i === 6 ? ' sat' : '');
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  const firstDay = new Date(curYear, curMonth, 1).getDay();
+  const daysInMonth = new Date(curYear, curMonth + 1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  for (let i = 0; i < firstDay; i++) {
+    const el = document.createElement('div');
+    el.className = 'cal-cell empty';
+    grid.appendChild(el);
   }
 
-  let sentCount = 0;
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    const rowDate = String(row[dateIdx]||'').slice(0, 10);
-    const phone = String(row[phoneIdx]||'').trim();
-    if (rowDate !== todayStr || !phone) continue;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(curYear, curMonth, d);
+    const dateStr = formatDate(curYear, curMonth + 1, d);
+    const dow = date.getDay();
+    const holidayName = holidayMap[dateStr];
+    const el = document.createElement('div');
 
-    const name = nameIdx >= 0 ? String(row[nameIdx]||'') : '';
-    const counselor = counselorIdx >= 0 ? String(row[counselorIdx]||'') : '';
-    const time = timeIdx >= 0 ? String(row[timeIdx]||'') : '';
-    const schedule = `${todayStr} ${time}`.trim();
+    let cls = 'cal-cell';
+    if (holidayName) {
+      cls += ' holiday';
+      el.innerHTML = `${d}<span class="cal-holiday-name">${holidayName}</span>`;
+    } else {
+      el.textContent = d;
+    }
 
-    const msg = todayTmpl
-      .replace(/{이름}/g, name)
-      .replace(/{일정}/g, schedule)
-      .replace(/{상담자}/g, counselor)
-      .replace(/{연락처}/g, phone);
+    if (date <= today) cls += ' disabled'; // 오늘 포함 과거 전체 비활성
+    else if (holidayName || SLOT_CONFIG._closedDays.includes(dow)) cls += ' closed'; // 공휴일 또는 일요일은 예약 마감
+    else {
+      if (selectedDate === dateStr) cls += ' selected';
+      el.addEventListener('click', () => selectDate(dateStr));
+    }
 
-    const result = sendAligoViaErp(phone, msg);
-    logSms({
-      type: '당일안내', name, phone,
-      result: result.status === 'ok' ? '발송성공' : ('발송실패:' + (result.message || ''))
+    el.className = cls;
+    grid.appendChild(el);
+  }
+}
+
+async function selectDate(dateStr) {
+  selectedDate = dateStr;
+  selectedTime = null;
+  renderCalendar();
+
+  // ★ 공휴일이면 서버 조회 없이 바로 마감 표시
+  if (holidayMap[dateStr]) {
+    document.getElementById('timeSlotArea').innerHTML =
+      `<div class="no-date-msg">해당 날짜는 공휴일(${holidayMap[dateStr]})로 휴무입니다.</div>`;
+    return;
+  }
+
+  // 로딩 표시
+  document.getElementById('timeSlotArea').innerHTML = '<div class="no-date-msg">예약가능 시간 불러오는 중...</div>';
+
+  // Apps Script에서 해당 날짜 closed 슬롯 조회
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getSlots&date=${dateStr}`);
+    const result = await res.json();
+    if (result.status === 'ok') {
+      if (result.dayClosed) {
+        document.getElementById('timeSlotArea').innerHTML = '<div class="no-date-msg">해당 날짜는 예약이 마감되었습니다.</div>';
+        return;
+      }
+      // closed 슬롯을 bookedSlots에 반영
+      bookedSlots[dateStr] = result.closedSlots || [];
+    }
+  } catch (e) {
+    // 네트워크 오류 시 빈 배열로 진행 (전체 오픈)
+    bookedSlots[dateStr] = bookedSlots[dateStr] || [];
+  }
+
+  renderTimeSlots(dateStr);
+}
+
+function renderTimeSlots(dateStr) {
+  const area = document.getElementById('timeSlotArea');
+
+  // 방어적 처리: 어떤 경로로든 공휴일 날짜가 들어오면 바로 마감 표시
+  if (holidayMap[dateStr]) {
+    area.innerHTML = `<div class="no-date-msg">해당 날짜는 공휴일(${holidayMap[dateStr]})로 휴무입니다.</div>`;
+    return;
+  }
+
+  const dm = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const dow = dm ? new Date(Number(dm[1]), Number(dm[2]) - 1, Number(dm[3])).getDay() : new Date(dateStr).getDay();
+
+  const slots = SLOT_CONFIG[dateStr] !== undefined
+    ? SLOT_CONFIG[dateStr]
+    : getDefaultSlotsForDow(dow); // 평일 14개 / 토요일 12개 / 일요일 0개
+
+  if (!slots || slots.length === 0) {
+    area.innerHTML = '<div class="no-date-msg">해당 날짜는 예약 가능한 시간이 없습니다.</div>';
+    return;
+  }
+
+  // 오늘 날짜인 경우 현재 시각 이전 슬롯 비활성화
+  const now = new Date();
+  const todayStr = formatDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  const isToday = dateStr === todayStr;
+  const curMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const booked = bookedSlots[dateStr] || [];
+  let html = '<div class="time-slots">';
+  slots.forEach(slot => {
+    const taken = booked.includes(slot);
+    // 오늘이면 슬롯 시작시간이 현재 시각 이전이면 비활성
+    let isPast = false;
+    if (isToday) {
+      const startStr = slot.split('~')[0]; // "10:30"
+      const [h, m] = startStr.split(':').map(Number);
+      isPast = (h * 60 + m) <= curMinutes;
+    }
+    const sel = selectedTime === slot;
+    const cls = (taken || isPast) ? ' taken' : sel ? ' selected' : '';
+    html += `<div class="time-slot${cls}" data-slot="${slot}">${slot}</div>`;
+  });
+  html += '</div>';
+  area.innerHTML = html;
+
+  area.querySelectorAll('.time-slot:not(.taken)').forEach(el => {
+    el.addEventListener('click', () => {
+      selectedTime = el.dataset.slot;
+      renderTimeSlots(dateStr);
     });
-    sentCount++;
-  }
-  return jsonResponse({ status: 'ok', sent: sentCount });
-}
-// ── 월별 휴무안내 조회 ──
-function getMonthlyNotice() {
-  try {
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    let sheet = ss.getSheetByName('월별휴무안내');
-    if (!sheet) return jsonResponse({ status: 'ok', notice: '{}', notices: {} });
-    const data = sheet.getDataRange().getValues();
-    const noticeMap = {};
-    for (let i = 1; i < data.length; i++) {
-      const key = String(data[i][0]||'').trim();
-      const val = String(data[i][1]||'').trim();
-      if (!key || key === 'notice' || key === '년월') continue;
-      noticeMap[key] = val;
-    }
-    // notice: JSON문자열 (ERP HTML용), notices: 객체 (RESERVE HTML용) 둘 다 반환
-    return jsonResponse({ status: 'ok', notice: JSON.stringify(noticeMap), notices: noticeMap });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
+  });
 }
 
-// ── 월별 휴무안내 저장 ──
-function saveMonthlyNotice(p) {
-  try {
-    const ss = SpreadsheetApp.openById(SS_RESERVE);
-    let sheet = ss.getSheetByName('월별휴무안내');
-    if (!sheet) {
-      sheet = ss.insertSheet('월별휴무안내');
-      sheet.appendRow(['년월', '내용']);
-      sheet.setFrozenRows(1);
-    }
+document.getElementById('prevMonth').addEventListener('click', () => {
+  curMonth--; if (curMonth < 0) { curMonth = 11; curYear--; }
+  renderCalendar();
+  document.getElementById('timeSlotArea').innerHTML = '<div class="no-date-msg">날짜를 선택해주세요</div>';
+  selectedDate = null; selectedTime = null;
+});
+document.getElementById('nextMonth').addEventListener('click', () => {
+  curMonth++; if (curMonth > 11) { curMonth = 0; curYear++; }
+  renderCalendar();
+  document.getElementById('timeSlotArea').innerHTML = '<div class="no-date-msg">날짜를 선택해주세요</div>';
+  selectedDate = null; selectedTime = null;
+});
 
-    // ERP HTML이 notice=JSON전체 형태로 전송
-    const noticeJson = p.notice || '';
-    if (!noticeJson) return jsonResponse({ status: 'error', message: 'notice 없음' });
-
-    let noticeMap = {};
-    try { noticeMap = JSON.parse(noticeJson); } catch(e) {
-      return jsonResponse({ status: 'error', message: 'JSON 파싱 오류' });
-    }
-
-    // 기존 데이터 전체 삭제 후 재작성 (심플하고 안전)
-    const lastRow = sheet.getLastRow();
-    if (lastRow >= 2) {
-      sheet.getRange(2, 1, lastRow - 1, 2).clearContent();
-    }
-
-    const newRows = [];
-    Object.keys(noticeMap).forEach(function(key) {
-      const val = String(noticeMap[key] || '').trim();
-      if (key && val) newRows.push([key, val]);
+// ─────────────────────────────────────────
+// RADIO / TOGGLE / PRODUCT BUTTONS
+// ─────────────────────────────────────────
+function bindRadioGroup(groupId, onChange) {
+  document.getElementById(groupId).querySelectorAll('.radio-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById(groupId).querySelectorAll('.radio-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      btn.querySelector('input').checked = true;
+      onChange(btn.dataset.val);
     });
-
-    if (newRows.length > 0) {
-      sheet.getRange(2, 1, newRows.length, 2).setValues(newRows);
-    }
-
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
+  });
 }
-// ── 메모 조회 (직원별) ──
-function getMemo(p) {
-  try {
-    const ss = SpreadsheetApp.openById(SS_HR);
-    let sheet = ss.getSheetByName('업무메모');
-    if (!sheet) return jsonResponse({ status: 'ok', memo: '' });
-    const data = sheet.getDataRange().getValues();
-    for (let i = 1; i < data.length; i++) {
-      if (String(data[i][0]).trim() === String(p.userId).trim()) {
-        return jsonResponse({ status: 'ok', memo: String(data[i][1]||'') });
-      }
+bindRadioGroup('visitorTypeGroup', v => visitorType = v);
+bindRadioGroup('visitCountGroup', v => visitCount = v);
+
+document.getElementById('revisitToggle').addEventListener('click', () => {
+  revisit = !revisit;
+  document.getElementById('revisitBox').className = 'toggle-box' + (revisit ? ' checked' : '');
+});
+
+document.getElementById('privacyToggle').addEventListener('click', () => {
+  privacyAgree = !privacyAgree;
+  document.getElementById('privacyBox').className = 'toggle-box' + (privacyAgree ? ' checked' : '');
+  document.getElementById('errPrivacy').textContent = '';
+});
+
+// 전화번호 자동 하이픈
+document.getElementById('fPhone').addEventListener('input', function() {
+  let v = this.value.replace(/\D/g, '');
+  if (v.length <= 3) this.value = v;
+  else if (v.length <= 7) this.value = v.slice(0,3) + '-' + v.slice(3);
+  else this.value = v.slice(0,3) + '-' + v.slice(3,7) + '-' + v.slice(7,11);
+});
+
+// ─────────────────────────────────────────
+// SUBMIT
+// ─────────────────────────────────────────
+document.getElementById('btnSubmit').addEventListener('click', submitForm);
+
+function validate() {
+  let ok = true;
+  let firstErrorEl = null;
+
+  const name = document.getElementById('fName').value.trim();
+  const phone = document.getElementById('fPhone').value.trim();
+
+  // 에러 초기화
+  document.getElementById('errName').textContent = '';
+  document.getElementById('errPhone').textContent = '';
+  document.getElementById('errPrivacy').textContent = '';
+  document.getElementById('fName').classList.remove('error');
+  document.getElementById('fPhone').classList.remove('error');
+
+  // 날짜/시간 체크
+  if (!selectedDate || !selectedTime) {
+    const calSection = document.querySelector('.form-section');
+    calSection.style.outline = '2px solid #c0392b';
+    calSection.style.borderRadius = '10px';
+    if (!firstErrorEl) firstErrorEl = calSection;
+    // 안내 메시지
+    let msg = document.getElementById('calErrMsg');
+    if (!msg) {
+      msg = document.createElement('div');
+      msg.id = 'calErrMsg';
+      msg.style.cssText = 'color:#c0392b;font-size:12px;margin-top:8px;';
+      document.getElementById('timeSlotArea').after(msg);
     }
-    return jsonResponse({ status: 'ok', memo: '' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
+    msg.textContent = !selectedDate ? '상담 날짜를 선택해주세요.' : '상담 시간을 선택해주세요.';
+    ok = false;
+  } else {
+    const calSection = document.querySelector('.form-section');
+    calSection.style.outline = '';
+    const msg = document.getElementById('calErrMsg');
+    if (msg) msg.textContent = '';
+  }
+
+  // 성함
+  if (!name) {
+    document.getElementById('errName').textContent = '성함을 입력해주세요.';
+    document.getElementById('fName').classList.add('error');
+    if (!firstErrorEl) firstErrorEl = document.getElementById('fName');
+    ok = false;
+  }
+
+  // 연락처
+  if (!phone || !/^01[0-9]-\d{3,4}-\d{4}$/.test(phone)) {
+    document.getElementById('errPhone').textContent = '올바른 연락처를 입력해주세요.';
+    document.getElementById('fPhone').classList.add('error');
+    if (!firstErrorEl) firstErrorEl = document.getElementById('fPhone');
+    ok = false;
+  }
+
+  // 개인정보 동의
+  if (!privacyAgree) {
+    document.getElementById('errPrivacy').textContent = '개인정보 활용에 동의해주세요.';
+    if (!firstErrorEl) firstErrorEl = document.getElementById('privacyToggle');
+    ok = false;
+  }
+
+  // 첫 번째 오류 위치로 스크롤
+  if (firstErrorEl) {
+    firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  return ok;
 }
 
-// ── 메모 저장 (직원별) ──
-function saveMemo(p) {
+async function submitForm() {
+  if (!validate()) return;
+
+  const payload = {
+    date: selectedDate,
+    time: selectedTime,
+    visitorType,
+    visitCount,
+    revisit: revisit ? '재방문' : '신규',
+    name: document.getElementById('fName').value.trim(),
+    phone: document.getElementById('fPhone').value.trim(),
+    company: document.getElementById('fCompany').value.trim(),
+    address: document.getElementById('fAddress').value.trim(),
+    size: document.getElementById('fSize').value.trim(),
+    workDate: document.getElementById('fWorkDate').value.trim(),
+    workPeriod: document.getElementById('fWorkPeriod').value.trim(),
+    memo: document.getElementById('fMemo').value.trim(),
+    submittedAt: new Date().toLocaleString('ko-KR'),
+  };
+
+  document.getElementById('loadingOverlay').classList.add('show');
+
   try {
-    const ss = SpreadsheetApp.openById(SS_HR);
-    let sheet = ss.getSheetByName('업무메모');
-    if (!sheet) {
-      sheet = ss.insertSheet('업무메모');
-      sheet.appendRow(['직원ID', '메모내용', '최종수정']);
-      sheet.setFrozenRows(1);
-    }
-    const now = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
-    const data = sheet.getDataRange().getValues();
-    for (let i = 1; i < data.length; i++) {
-      if (String(data[i][0]).trim() === String(p.userId).trim()) {
-        sheet.getRange(i + 1, 2).setValue(p.memo || '');
-        sheet.getRange(i + 1, 3).setValue(now);
-        return jsonResponse({ status: 'ok' });
-      }
-    }
-    sheet.appendRow([p.userId, p.memo || '', now]);
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
-}
+    // 기존 트리거: 구글시트 업로드 및 알람
+    const params = new URLSearchParams({ action: 'submit', ...payload });
+    const res = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`);
+    const result = await res.json();
 
-// ── 예약 접수 이메일 발송 ──
-function sendReservationEmail(p) {
-  try {
-    const subject = `[신규쇼룸예약] ${p.name}님`;
+    // 신규 트리거: 이메일 발송
+    const emailParams = new URLSearchParams({ action: 'sendEmail', ...payload });
+    await fetch(`${APPS_SCRIPT_URL}?${emailParams.toString()}`).catch(() => {});
 
-    const row = (label, value) => `
-      <tr>
-        <td style="color:#999;font-weight:300;font-size:13px;padding:8px 12px;width:38%;vertical-align:top;">${label}</td>
-        <td style="color:#1a1a1a;font-weight:700;font-size:13px;padding:8px 12px;">${value || '-'}</td>
-      </tr>`;
-
-    const htmlBody = `
-<div style="font-family:Arial,'Noto Sans KR',sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#fff;border:1px solid #e0d6ce;border-radius:10px;">
-  <h2 style="font-size:17px;font-weight:800;color:#7a5c44;border-bottom:2px solid #f5ede6;padding-bottom:12px;margin-bottom:20px;">
-    상담 예약 접수
-  </h2>
-  <table style="width:100%;border-collapse:collapse;line-height:1.8;">
-    ${row('예약 일정', p.date + ' ' + p.time)}
-    ${row('예약자 유형', p.visitorType)}
-    ${row('방문 인원', p.visitCount)}
-    ${row('재방문', p.revisit)}
-    ${row('예약자 성함', p.name)}
-    ${row('연락처', p.phone)}
-    ${row('업체명', p.company)}
-    ${row('현장 주소', p.address)}
-    ${row('평수', p.size)}
-    ${row('마루 시공 예정일', p.workDate)}
-    ${row('공사 기간', p.workPeriod)}
-    ${row('전달 사항', p.memo)}
-  </table>
-  <p style="margin-top:28px;font-size:11px;color:#bbb;text-align:center;border-top:1px solid #f0e8e0;padding-top:16px;">
-    지복득마루 홈페이지 자동발송 메일입니다.
-  </p>
-</div>`;
-
-    GmailApp.sendEmail(
-      'sales@jibokdeukmaru.com',
-      subject,
-      '',
-      {
-        name: '지복득마루 홈페이지',
-        htmlBody: htmlBody,
-        cc: 'rnd@jibokdeukmaru.com'
-      }
-    );
-
-    return jsonResponse({ status: 'ok' });
-  } catch(err) {
-    return jsonResponse({ status: 'error', message: err.message });
+    if (result.status === 'ok') showSuccess(result.receiptNo);
+    else throw new Error(result.message || '오류가 발생했습니다.');
+  } catch (e) {
+    alert('접수 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.\n' + e.message);
+  } finally {
+    document.getElementById('loadingOverlay').classList.remove('show');
   }
 }
-function updateEmployeeLeave(p) {
-  try {
-    CacheService.getScriptCache().remove('employees_data');
-    const ss = SpreadsheetApp.openById(SS_HR);
-    const sheet = ss.getSheetByName('직원정보');
-    if (!sheet) return jsonResponse({ status: 'error', message: '직원정보 시트 없음' });
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) return jsonResponse({ status: 'error', message: '데이터 없음' });
-    const data = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
-    let targetRow = -1;
-    for (let i = 0; i < data.length; i++) {
-      if (String(data[i][0]).trim() === String(p.id).trim()) { targetRow = i + 2; break; }
-    }
-    if (targetRow === -1) return jsonResponse({ status: 'error', message: '직원을 찾을 수 없습니다.' });
-    sheet.getRange(targetRow, 6).setValue(p.leaveDate || ''); // F열 = leaveDate
-    return jsonResponse({ status: 'ok' });
-  } catch(err) { return jsonResponse({ status: 'error', message: err.message }); }
+
+function showSuccess(receiptNo) {
+  document.getElementById('mainForm').style.display = 'none';
+  const s = document.getElementById('successScreen');
+  s.style.display = 'block';
+  s.innerHTML = `
+    <h2>예약 접수 완료</h2>
+    <p>상담 예약이 정상적으로 접수되었습니다.<br>문의 : 02-576-7736 / 010-5264-7736<br><br>감사합니다. <strong>지복득마루</strong></p>
+  `;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ════════════════════════════════════════════════════════════
-// ── ERP 이메일 탭 직접 발송 ──
-// ════════════════════════════════════════════════════════════
-function sendEmailFromERP(p) {
-  try {
-    const to      = (p.to      || '').trim();
-    const from    = (p.from    || '').trim();
-    const cc      = (p.cc      || '').trim();
-    const subject = (p.subject || '').trim();
-    const body    = (p.body    || '').trim();
-    if (!to || !subject || !body) {
-      return jsonResponse({ status: 'error', message: '필수 항목(to, subject, body)이 누락되었습니다.' });
+// ─────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────
+function formatDate(y, m, d) {
+  return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+
+// ─────────────────────────────────────────
+// WORK DATE DATEPICKER
+// ─────────────────────────────────────────
+let dpYear, dpMonth, selectedWorkDate = null;
+
+function initDatepicker() {
+  const now = new Date();
+  dpYear = now.getFullYear();
+  dpMonth = now.getMonth();
+  renderDp();
+}
+
+function renderDp() {
+  const label = document.getElementById('dpMonthLabel');
+  label.textContent = `${dpYear}년 ${dpMonth + 1}월`;
+  const grid = document.getElementById('dpGrid');
+  grid.innerHTML = '';
+
+  const days = ['일','월','화','수','목','금','토'];
+  days.forEach((d, i) => {
+    const el = document.createElement('div');
+    el.className = 'dp-label' + (i===0?' sun':i===6?' sat':'');
+    el.textContent = d;
+    grid.appendChild(el);
+  });
+
+  const firstDay = new Date(dpYear, dpMonth, 1).getDay();
+  const daysInMonth = new Date(dpYear, dpMonth + 1, 0).getDate();
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  for (let i = 0; i < firstDay; i++) {
+    const el = document.createElement('div');
+    el.className = 'dp-cell dp-empty';
+    grid.appendChild(el);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(dpYear, dpMonth, d);
+    const dateStr = formatDate(dpYear, dpMonth + 1, d);
+    const el = document.createElement('div');
+    el.textContent = d;
+    let cls = 'dp-cell';
+    if (date < today) cls += ' dp-past';
+    else {
+      if (date.toDateString() === today.toDateString()) cls += ' dp-today';
+      if (selectedWorkDate === dateStr) cls += ' dp-selected';
+      el.addEventListener('click', () => {
+        selectedWorkDate = dateStr;
+        const [y, m, dd] = dateStr.split('-');
+        document.getElementById('workDateDisplay').textContent = `${y}년 ${parseInt(m)}월 ${parseInt(dd)}일`;
+        document.getElementById('workDateDisplay').classList.remove('placeholder');
+        document.getElementById('fWorkDate').value = dateStr;
+        document.getElementById('workDateDropdown').classList.remove('open');
+        renderDp();
+      });
     }
-    const ALLOWED_FROM = [
-      'info@jibokdeukmaru.com',
-      'sales@jibokdeukmaru.com',
-      'rnd@jibokdeukmaru.com',
-    ];
-
-    // ── 발신자 시그니처 생성 ──
-    const senderName    = (p.senderName    || '').trim();
-    const senderTitle   = (p.senderTitle   || '').trim();
-    const senderDept    = (p.senderDept    || '').trim();
-    const senderPhone   = (p.senderPhone   || '').trim();
-    const senderEmail   = (p.senderEmail   || '').trim();
-    const senderCardUrl = (p.senderCardUrl || '').trim();
-
-    const signature = senderName ? `
-<table style="margin-top:32px;padding-top:20px;border-top:2px solid #E5D9C6;font-family:Arial,'Noto Sans KR',sans-serif;border-collapse:collapse;">
-  <tr>
-    ${senderCardUrl ? `<td style="padding-right:20px;vertical-align:top;">
-      <img src="${senderCardUrl}" alt="명함" style="width:100px;height:auto;border-radius:6px;border:1px solid #E5D9C6;">
-    </td>` : ''}
-    <td style="vertical-align:top;">
-      <div style="font-size:16px;font-weight:800;color:#2B2521;margin-bottom:2px;">${senderName}${senderTitle ? ' <span style="font-size:13px;font-weight:600;color:#A2693E;">' + senderTitle + '</span>' : ''}</div>
-      ${senderDept ? `<div style="font-size:12px;color:#888;margin-bottom:6px;">${senderDept}</div>` : ''}
-      <table style="border-collapse:collapse;font-size:12px;color:#666;line-height:1.9;">
-        ${senderPhone ? `<tr><td style="color:#A2693E;font-weight:700;padding-right:10px;white-space:nowrap;">T.</td><td>${senderPhone}</td></tr>` : ''}
-        ${senderEmail ? `<tr><td style="color:#A2693E;font-weight:700;padding-right:10px;">E.</td><td><a href="mailto:${senderEmail}" style="color:#A2693E;text-decoration:none;">${senderEmail}</a></td></tr>` : ''}
-        <tr><td style="color:#A2693E;font-weight:700;padding-right:10px;">W.</td><td><a href="https://jibokdeukmaru.com" style="color:#A2693E;text-decoration:none;">jibokdeukmaru.com</a></td></tr>
-      </table>
-      <div style="margin-top:10px;font-size:14px;font-weight:800;color:#A2693E;">지복득마루</div>
-    </td>
-  </tr>
-</table>` : '';
-
-    const escapedBody = body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const htmlBody = `
-<div style="font-family:Arial,'Noto Sans KR',sans-serif;max-width:640px;margin:0 auto;padding:32px 24px;background:#fff;border:1px solid #e0d6ce;border-radius:10px;">
-  <div style="white-space:pre-line;font-size:14px;color:#1a1a1a;line-height:1.9;">${escapedBody}</div>
-  ${signature}
-</div>`;
-
-    const senderDisplayName = senderName ? senderName + (senderTitle ? ' ' + senderTitle : '') + ' | 지복득마루' : '지복득마루';
-    const options = { name: senderDisplayName, htmlBody };
-    if (cc) options.cc = cc;
-    if (from && ALLOWED_FROM.includes(from)) options.from = from;
-    GmailApp.sendEmail(to, subject, '', options);
-    return jsonResponse({ status: 'ok' });
-  } catch(err) {
-    return jsonResponse({ status: 'error', message: err.message });
+    el.className = cls;
+    grid.appendChild(el);
   }
 }
+
+document.getElementById('workDateInput').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('workDateDropdown').classList.toggle('open');
+  renderDp();
+});
+document.getElementById('dpPrev').addEventListener('click', (e) => {
+  e.stopPropagation();
+  dpMonth--; if (dpMonth < 0) { dpMonth = 11; dpYear--; }
+  renderDp();
+});
+document.getElementById('dpNext').addEventListener('click', (e) => {
+  e.stopPropagation();
+  dpMonth++; if (dpMonth > 11) { dpMonth = 0; dpYear++; }
+  renderDp();
+});
+document.addEventListener('click', (e) => {
+  if (!document.getElementById('workDateWrap').contains(e.target)) {
+    document.getElementById('workDateDropdown').classList.remove('open');
+  }
+});
+
+// INIT
+initCalendar();
+initDatepicker();
+
+// 언어 초기화 (저장된 언어 또는 기본값 ko)
+setLang(localStorage.getItem('jbd_lang') || 'ko');
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const lang = this.getAttribute('onclick').match(/'(\w+)'/)[1];
+    localStorage.setItem('jbd_lang', lang);
+  });
+});
+
+// 월별 휴무안내 팝업 로드
+window.addEventListener('load', () => loadMonthlyNotice());
+</script>
+</body>
+</html>
