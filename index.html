@@ -1438,10 +1438,9 @@ function showSuccess(receiptNo) {
   document.getElementById('mainForm').style.display = 'none';
   const s = document.getElementById('successScreen');
   s.style.display = 'block';
-  const t = I18N[currentLang] || I18N['ko'];
   s.innerHTML = `
-    <h2>${t.successTitle || '예약 접수 완료'}</h2>
-    <p>${t.successDesc || '상담 예약이 정상적으로 접수되었습니다.<br>예약 확정시 회신 문자를 보내드립니다.<br>문의 : 02-576-7736 / 010-5264-7736<br><br>감사합니다. <strong>지복득마루</strong>'}</p>
+    <h2>예약 접수 완료</h2>
+    <p>상담 예약이 정상적으로 접수되었습니다.<br>예약 확정시 회신 문자를 보내드립니다.<br>문의 : 02-576-7736 / 010-5264-7736<br><br>감사합니다. <strong>지복득마루</strong></p>
   `;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
