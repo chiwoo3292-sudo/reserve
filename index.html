@@ -3,6 +3,49 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script type="module">
+  // ══════════════════════════════════════════════════════════════
+  //  Firebase 초기화 (고객용 예약접수 페이지 — 로그인 없음)
+  //  이 페이지는 직원 로그인 절차가 없으므로, 페이지 로드 즉시 익명 인증을 실행해
+  //  Firestore 보안 규칙이 "인증된 사용자만 허용"을 걸 수 있도록 한다.
+  // ══════════════════════════════════════════════════════════════
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import {
+    getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc,
+    updateDoc, deleteDoc, query, orderBy, limit, where
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDWUU2Fz1s9taDWAkt7Uz_NdwG6qB9UxhQ",
+    authDomain: "jibokdeukmaru-2cb6a.firebaseapp.com",
+    projectId: "jibokdeukmaru-2cb6a",
+    storageBucket: "jibokdeukmaru-2cb6a.firebasestorage.app",
+    messagingSenderId: "519034532583",
+    appId: "1:519034532583:web:a9cc6bf7a8b2f136922842"
+  };
+
+  const fbApp = initializeApp(firebaseConfig);
+  const db = getFirestore(fbApp);
+  const auth = getAuth(fbApp);
+
+  window.FB = {
+    db, auth, collection, doc, getDoc, getDocs, setDoc, addDoc,
+    updateDoc, deleteDoc, query, orderBy, limit, where
+  };
+
+  let _fbAuthPromise = null;
+  window.fbEnsureAuth = function() {
+    if (auth.currentUser) return Promise.resolve(auth.currentUser);
+    if (_fbAuthPromise) return _fbAuthPromise;
+    _fbAuthPromise = signInAnonymously(auth)
+      .then(cred => cred.user)
+      .catch(err => { console.error('Firebase 익명 인증 실패:', err); _fbAuthPromise = null; throw err; });
+    return _fbAuthPromise;
+  };
+  // 페이지 로드 즉시 인증 시작 (제출 시점에 지연되지 않도록 미리 준비)
+  window.fbEnsureAuth().catch(() => {});
+</script>
 <script>
 // ── 윅스(Wix) iframe 스케일링 보정 (ERP코드.txt와 동일 로직) ──
 (function () {
@@ -1416,17 +1459,35 @@ async function submitForm() {
   document.getElementById('loadingOverlay').classList.add('show');
 
   try {
-    // 기존 트리거: 구글시트 업로드 및 알람
-    const params = new URLSearchParams({ action: 'submit', ...payload });
-    const res = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`);
-    const result = await res.json();
+    await window.fbEnsureAuth();
 
-    // 신규 트리거: 이메일 발송
-    const emailParams = new URLSearchParams({ action: 'sendEmail', ...payload });
-    await fetch(`${APPS_SCRIPT_URL}?${emailParams.toString()}`).catch(() => {});
+    // 접수번호 생성: 오늘 날짜(yyyyMMdd) 기준 접수 건수 + 1
+    const today = new Date();
+    const todayKey = today.getFullYear()
+      + String(today.getMonth()+1).padStart(2,'0')
+      + String(today.getDate()).padStart(2,'0');
+    const todayQuery = window.FB.query(
+      window.FB.collection(window.FB.db, 'reservations'),
+      window.FB.where('submittedDateKey', '==', todayKey)
+    );
+    const todaySnap = await window.FB.getDocs(todayQuery);
+    const receiptNo = `RES-${todayKey}-${String(todaySnap.size + 1).padStart(3, '0')}`;
 
-    if (result.status === 'ok') showSuccess(result.receiptNo);
-    else throw new Error(result.message || '오류가 발생했습니다.');
+    // 예약 문서 저장 (문서 ID = 접수번호)
+    const ref = window.FB.doc(window.FB.db, 'reservations', receiptNo);
+    await window.FB.setDoc(ref, {
+      ...payload,
+      receiptNo,
+      submittedDateKey: todayKey,
+      submittedAtMs: Date.now(),
+      status: '대기'
+    });
+
+    // 신규 트리거: 이메일 발송 (기존 앱스스크립트 그대로 유지 — Firestore와 무관)
+    const emailParams = new URLSearchParams({ action: 'sendEmail', ...payload, receiptNo });
+    fetch(`${APPS_SCRIPT_URL}?${emailParams.toString()}`).catch(() => {});
+
+    showSuccess(receiptNo);
   } catch (e) {
     alert('접수 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.\n' + e.message);
   } finally {
